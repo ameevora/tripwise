@@ -109,6 +109,7 @@
           "    year(effective_date) as effective_year\n",
           "  from serverless_stable_mv5gxq_catalog.insurance_trip_wise.policies\n",
           "  where year(effective_date) in ('2026','2025')\n",
+          "  and month(effective_date) <= 3\n",
           ")\n",
           "select \n",
           "  effective_year,\n",
@@ -499,6 +500,9 @@
                     "filters": [
                       {
                         "expression": "`did_sign_up` IN (TRUE)"
+                      },
+                      {
+                        "expression": "MONTH(`offer_date`) <= 3"
                       }
                     ],
                     "disaggregated": false,
@@ -512,11 +516,14 @@
                 }
               ],
               "spec": {
-                "version": 2,
                 "frame": {
                   "showTitle": true,
-                  "title": "Total Revenue from Embedded Products"
+                  "title": {
+                    "value": "Total Revenue from Embedded Products",
+                    "fields": []
+                  }
                 },
+                "version": 2,
                 "widgetType": "counter",
                 "encodings": {
                   "value": {
@@ -535,6 +542,9 @@
                   "period": {
                     "fieldName": "yearly(offer_date)"
                   }
+                },
+                "data": {
+                  "queryName": "main_query"
                 }
               }
             },
@@ -555,35 +565,63 @@
                     "datasetName": "76a48e20",
                     "fields": [
                       {
-                        "name": "max(trip_premium_ratio)",
-                        "expression": "MAX(`trip_premium_ratio`)"
+                        "name": "effective_year",
+                        "expression": "`effective_year`"
                       },
                       {
-                        "name": "min(trip_premium_ratio)",
-                        "expression": "MIN(`trip_premium_ratio`)"
+                        "name": "avg(trip_premium_ratio)",
+                        "expression": "AVG(`trip_premium_ratio`)"
                       }
                     ],
-                    "disaggregated": false
+                    "disaggregated": false,
+                    "orders": [
+                      {
+                        "direction": "DESC",
+                        "expression": "`effective_year`"
+                      }
+                    ]
                   }
                 }
               ],
               "spec": {
-                "version": 2,
                 "frame": {
                   "showTitle": true,
-                  "title": "Embedded Revenue Percentage"
+                  "title": {
+                    "value": "Embedded Revenue Percentage",
+                    "fields": []
+                  }
                 },
+                "version": 2,
                 "widgetType": "counter",
                 "encodings": {
                   "value": {
-                    "fieldName": "min(trip_premium_ratio)"
+                    "fieldName": "avg(trip_premium_ratio)",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 1
+                      },
+                      "abbreviation": "none"
+                    },
+                    "displayName": "Embedded Rev %"
                   },
                   "target": {
-                    "fieldName": "max(trip_premium_ratio)",
+                    "fieldName": "avg(trip_premium_ratio)",
                     "change": {
                       "type": "percent"
+                    },
+                    "period": {
+                      "type": "relative-to-value-period",
+                      "offset": -1
                     }
+                  },
+                  "period": {
+                    "fieldName": "effective_year"
                   }
+                },
+                "data": {
+                  "queryName": "main_query"
                 }
               }
             },
@@ -686,6 +724,9 @@
                     "filters": [
                       {
                         "expression": "`policy_type` IN ('full_term')"
+                      },
+                      {
+                        "expression": "MONTH(`effective_date`) <= 3"
                       }
                     ],
                     "disaggregated": false,
@@ -699,11 +740,14 @@
                 }
               ],
               "spec": {
-                "version": 2,
                 "frame": {
                   "showTitle": true,
-                  "title": "Total Revenue from Full Term Polcies"
+                  "title": {
+                    "value": "Total Revenue from Full Term Polcies",
+                    "fields": []
+                  }
                 },
+                "version": 2,
                 "widgetType": "counter",
                 "encodings": {
                   "value": {
@@ -722,6 +766,9 @@
                   "period": {
                     "fieldName": "yearly(effective_date)"
                   }
+                },
+                "data": {
+                  "queryName": "main_query"
                 }
               }
             },
@@ -737,7 +784,7 @@
               "name": "main-title",
               "multilineTextboxSpec": {
                 "lines": [
-                  "<span style=\"font-size:54px;line-height:1.5;color:#00A972\">\ud83d\udcbc Business KPIs</span>"
+                  "<span style=\"font-size:54px;line-height:1.5;color:#00A972\">💼 Business KPIs</span>"
                 ]
               }
             },
@@ -753,7 +800,7 @@
               "name": "e1c66df6",
               "multilineTextboxSpec": {
                 "lines": [
-                  "<span style=\"font-size:24px;color:#00A972\">\ud83d\udcb0 </span><span style=\"font-size: 28px;color: #00A972;font-family: Arial;\">Executive Insights: Policy Mix & Performance</span>"
+                  "<span style=\"font-size:24px;color:#00A972\">💰 </span><span style=\"font-size: 28px;color: #00A972;font-family: Arial;\">Executive Insights: Policy Mix & Performance</span>"
                 ]
               }
             },
@@ -1463,7 +1510,7 @@
               "name": "ef706670",
               "multilineTextboxSpec": {
                 "lines": [
-                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">\ud83d\udd50 Trip Seasonality & Peak Driving Hours</span>"
+                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">🕐 Trip Seasonality & Peak Driving Hours</span>"
                 ]
               }
             },
@@ -1487,7 +1534,7 @@
               "name": "b800a16f",
               "multilineTextboxSpec": {
                 "lines": [
-                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">\ud83d\udcc8 Conversion Drivers: Trigger & Timing Analysis</span>"
+                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">📈 Conversion Drivers: Trigger & Timing Analysis</span>"
                 ]
               }
             },
@@ -1905,7 +1952,7 @@
               "name": "556a51be",
               "multilineTextboxSpec": {
                 "lines": [
-                  "<span style=\"font-size:54px;line-height:1.5;color:#00A972\">\ud83d\udcca Offer Performance</span>"
+                  "<span style=\"font-size:54px;line-height:1.5;color:#00A972\">📊 Offer Performance</span>"
                 ]
               }
             },
@@ -2038,7 +2085,7 @@
               "name": "b5021a29",
               "multilineTextboxSpec": {
                 "lines": [
-                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">\ud83d\udd2c Underwriter Metrics: Funnel & Conversion Timing</span>"
+                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">🔬 Underwriter Metrics: Funnel & Conversion Timing</span>"
                 ]
               }
             },
@@ -2120,7 +2167,7 @@
               "name": "exec_metrics_header",
               "multilineTextboxSpec": {
                 "lines": [
-                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">\ud83c\udfaf Executive Metrics: Revenue Efficiency & Funnel Analysis</span>"
+                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">🎯 Executive Metrics: Revenue Efficiency & Funnel Analysis</span>"
                 ]
               }
             },
@@ -2519,7 +2566,7 @@
               "name": "page_title",
               "multilineTextboxSpec": {
                 "lines": [
-                  "<span style=\"font-size:54px;line-height:1.5;color:#00A972\">\ud83c\udfaf Trip Score Insights</span>"
+                  "<span style=\"font-size:54px;line-height:1.5;color:#00A972\">🎯 Trip Score Insights</span>"
                 ]
               }
             },
@@ -2728,7 +2775,7 @@
               "name": "claims_header",
               "multilineTextboxSpec": {
                 "lines": [
-                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">\ud83d\uddfa\ufe0f Claims View: Risk Hotspots & Score vs. Incidents</span>"
+                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">🗺️ Claims View: Risk Hotspots & Score vs. Incidents</span>"
                 ]
               }
             },
@@ -2908,7 +2955,7 @@
               "name": "exec_header_2",
               "multilineTextboxSpec": {
                 "lines": [
-                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">\ud83c\udfaf Executive View: Conversion & Risk Profile Analysis</span>"
+                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">🎯 Executive View: Conversion & Risk Profile Analysis</span>"
                 ]
               }
             },
@@ -2976,7 +3023,7 @@
               "spec": {
                 "version": 3,
                 "frame": {
-                  "title": "Conversion Rate: Score Band \u00d7 Risk Severity",
+                  "title": "Conversion Rate: Score Band × Risk Severity",
                   "showTitle": true
                 },
                 "widgetType": "pivot",
@@ -3423,7 +3470,7 @@
               "name": "underwriter_header",
               "multilineTextboxSpec": {
                 "lines": [
-                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">\ud83d\udcca Underwriter View: Score Distribution & Risk Breakdown</span>"
+                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">📊 Underwriter View: Score Distribution & Risk Breakdown</span>"
                 ]
               }
             },
