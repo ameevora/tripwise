@@ -1,0 +1,35 @@
+command: [
+  "flask",
+  "--app",
+  "app.py",
+  "run",
+  "--host=0.0.0.0",
+  "--port=8000"
+]
+
+dependencies:
+  - PyYAML
+
+env:
+  - name: DATABRICKS_GENIE_SPACE_ID
+    value: '01f15d6cfd4a14c29378cffba250e64b'
+  - name: DATABRICKS_DASHBOARD_ID
+    value: '01f15bdebe6a12d8b153f14e54703b8e'
+  - name: DATABRICKS_HOST
+    value: 'https://fevm-serverless-stable-mv5gxq.cloud.databricks.com'
+  - name: DATABRICKS_WAREHOUSE_ID
+    value: '22ad910fe1aed92d'
+  - name: LLM_ENDPOINT
+    value: 'databricks-meta-llama-3-3-70b-instruct'
+  - name: LAKEBASE_HOST
+    value: 'ep-soft-frost-d263qfy8.database.us-east-1.cloud.databricks.com'
+  - name: LAKEBASE_USER
+    value: 'faee39eb-c8e5-4d99-ada7-4deca1cea3e4'
+  - name: LAKEBASE_INSTANCE_NAME
+    value: 'tripwise'
+  - name: LAKEBASE_ENDPOINT
+    value: 'projects/tripwise/branches/production/endpoints/primary'
+  - name: LAKEBASE_SCHEMA
+    value: 'tripwise_demo'
+  - name: PREMIUM_FORECAST_ENDPOINT
+    value: 'premium_forecast_tripwise'

@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<!-- <style>
+    /* Override dark theme for analytics page to match white dashboard */
+    .analytics-container {
+        background-color: #ffffff;
+        margin: -24px -32px;
+        padding: 24px 32px;
+        min-height: calc(100vh - 0px);
+    }
+    .analytics-container .page-header {
+        margin-bottom: 24px;
+    }
+    .analytics-container .page-title {
+        color: #000000 !important;
+    }
+    .analytics-container .page-subtitle {
+        color: #333333 !important;
+    }
+    .analytics-container .card {
+        background: #ffffff;
+        border: 1px solid #e0e0e0;
+    }
+</style> -->
+
+<div class="analytics-container">
+    <div class="page-header">
+        <h1 class="page-title">Analytics Dashboard</h1>
+        <p class="page-subtitle">Real-time embedded insurance performance metrics</p>
+    </div>
+
+    <div class="card">
+        <iframe
+            src="{{ dashboard_url }}"
+            class="dashboard-frame"
+            title="Tripwise Analytics Dashboard"
+            allow="fullscreen"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals"
+            loading="lazy">
+        </iframe>
+    </div>
+</div>
+{% endblock %}

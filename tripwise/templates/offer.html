@@ -1,0 +1,354 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Agent Offer Action</h1>
+    <p class="page-subtitle">Select a registered device, view state-based risk insights, and send targeted embedded product offers</p>
+</div>
+
+<div class="row g-4">
+    <!-- Device Selection Panel -->
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-phone-fill me-2"></i>Registered Devices (Lakebase)</span>
+                <button class="btn btn-outline-secondary btn-sm" onclick="loadDevices()">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="p-3 border-bottom" style="border-color: var(--border-color) !important;">
+                    <input type="text" class="form-control" id="device-search" placeholder="Search by name or device ID..." oninput="filterDevices()">
+                </div>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover mb-0" id="devices-table">
+                        <thead>
+                            <tr>
+                                <th>Driver</th>
+                                <th>Registered</th>
+                            </tr>
+                        </thead>
+                        <tbody id="devices-tbody">
+                            <tr><td colspan="2" class="text-center text-secondary py-4">Loading devices...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendation & Email -->
+    <div class="col-lg-7">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-lightbulb me-2"></i>Offer Recommendation
+            </div>
+            <div class="card-body">
+                <div id="recommendation-placeholder" class="text-center text-secondary py-5">
+                    <i class="bi bi-arrow-left-circle" style="font-size: 48px; opacity: 0.5;"></i>
+                    <p class="mt-3">Select a device from the list to view recommendation</p>
+                </div>
+
+                <div id="recommendation-content" style="display: none;">
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-icon blue"><i class="bi bi-person-fill"></i></div>
+                                <div class="stat-content">
+                                    <h4 id="rec-driver-name">-</h4>
+                                    <p id="rec-device-id">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-icon orange"><i class="bi bi-speedometer2"></i></div>
+                                <div class="stat-content">
+                                    <h4 id="rec-driving-score">-</h4>
+                                    <p>Driving Score</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-icon green"><i class="bi bi-geo-alt-fill"></i></div>
+                                <div class="stat-content">
+                                    <h4 id="rec-state">-</h4>
+                                    <p>Derived State</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-icon purple"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                                <div class="stat-content">
+                                    <h4 id="rec-trigger">-</h4>
+                                    <p>Top Trigger</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Registration Lat</label>
+                            <input type="text" class="form-control" id="rec-lat" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Registration Lon</label>
+                            <input type="text" class="form-control" id="rec-lon" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Registered At</label>
+                            <input type="text" class="form-control" id="rec-registered-at" readonly>
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--border-color);">
+
+                    <div id="product-recommendation" style="display: none;">
+                        <h6 class="mb-3"><i class="bi bi-shield-check me-2"></i>Recommended Embedded Product</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Product Name</label>
+                                <input type="text" class="form-control fw-bold" id="rec-product-name" readonly style="color: var(--accent-blue);">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Per-Trip Price</label>
+                                <input type="text" class="form-control" id="rec-product-price" readonly>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Product ID</label>
+                                <input type="text" class="form-control" id="rec-product-id" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="no-recommendation" style="display: none;">
+                        <div class="text-center text-secondary py-3">
+                            <i class="bi bi-info-circle" style="font-size: 24px;"></i>
+                            <p class="mt-2">No recommendation available for this location</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Offer Email Generation -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-envelope-paper me-2"></i>Generate Offer Email
+            </div>
+            <div class="card-body">
+                <div class="d-flex gap-2 mb-3">
+                    <button class="btn btn-primary flex-grow-1" onclick="generateOfferEmail()" id="generate-offer-btn" disabled>
+                        <i class="bi bi-stars me-2"></i>Generate Offer Email
+                    </button>
+                </div>
+
+                <div id="offer-email-loading" class="loading-bar mb-3" style="display: none;"></div>
+
+                <label class="form-label">Generated Offer Email</label>
+                <div class="email-preview" id="offer-email-preview" contenteditable="false" spellcheck="true">
+                    <span class="text-secondary">Select a device and click "Generate Offer Email" to create a targeted product offer...</span>
+                </div>
+                <small class="text-secondary mt-1" id="offer-email-edit-hint" style="display: none;"><i class="bi bi-pencil me-1"></i>You can edit the email above before copying or sending.</small>
+
+                <div class="d-flex gap-2 mt-3">
+                    <button class="btn btn-secondary" onclick="copyOfferEmail()" id="copy-offer-btn" disabled>
+                        <i class="bi bi-clipboard me-2"></i>Copy to Clipboard
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="sendOfferEmail()" id="send-offer-btn" disabled>
+                        <i class="bi bi-send me-2"></i>Send Email
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allDevices = [];
+let selectedDevice = null;
+let currentRecommendation = null;
+
+document.addEventListener('DOMContentLoaded', loadDevices);
+
+async function loadDevices() {
+    const tbody = document.getElementById('devices-tbody');
+    tbody.innerHTML = '<tr><td colspan="2" class="text-center py-4"><div class="loading-bar"></div></td></tr>';
+
+    try {
+        const response = await fetch('/api/lakebase_devices');
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            allDevices = data.data;
+            renderDevices(allDevices);
+        } else {
+            tbody.innerHTML = `<tr><td colspan="2" class="text-center text-danger py-4">Error: ${data.message}</td></tr>`;
+        }
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="2" class="text-center text-danger py-4">Error: ${error.message}</td></tr>`;
+    }
+}
+
+function renderDevices(devices) {
+    const tbody = document.getElementById('devices-tbody');
+
+    if (!devices || devices.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" class="text-center text-secondary py-4">No devices found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = devices.map(d => {
+        const regDate = d.registered_at ? new Date(d.registered_at).toLocaleDateString() : 'N/A';
+        return `
+        <tr onclick="selectDevice('${d.device_id}')" style="cursor: pointer;">
+            <td>
+                <div class="fw-semibold">${d.driver_name || 'Unknown'}</div>
+                <small class="text-secondary">${d.device_id}</small>
+            </td>
+            <td>
+                <small>${regDate}</small>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function getScoreColor(score) {
+    if (score >= 80) return 'var(--accent-green)';
+    if (score >= 60) return '#e3b341';
+    return '#f85149';
+}
+
+function filterDevices() {
+    const search = document.getElementById('device-search').value.toLowerCase();
+    const filtered = allDevices.filter(d =>
+        (d.driver_name || '').toLowerCase().includes(search) ||
+        (d.device_id || '').toLowerCase().includes(search)
+    );
+    renderDevices(filtered);
+}
+
+async function selectDevice(deviceId) {
+    try {
+        const response = await fetch(`/api/offer_recommendation/${deviceId}`);
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            selectedDevice = data.device;
+            currentRecommendation = data.recommendation;
+            displayRecommendation(data);
+            document.getElementById('generate-offer-btn').disabled = !data.recommendation;
+        } else {
+            alert('Error loading recommendation: ' + data.message);
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+function displayRecommendation(data) {
+    document.getElementById('recommendation-placeholder').style.display = 'none';
+    document.getElementById('recommendation-content').style.display = 'block';
+
+    const device = data.device;
+    document.getElementById('rec-driver-name').textContent = device.driver_name || 'Unknown';
+    const scoreEl = document.getElementById('rec-driving-score');
+    const score = device.current_driving_score;
+    if (score !== null && score !== undefined) {
+        scoreEl.textContent = Math.round(score);
+        scoreEl.style.color = getScoreColor(score);
+    } else {
+        scoreEl.textContent = 'N/A';
+        scoreEl.style.color = 'var(--text-secondary)';
+    }
+    document.getElementById('rec-device-id').textContent = device.device_id || '-';
+    document.getElementById('rec-state').textContent = data.state || 'Unknown';
+    document.getElementById('rec-trigger').textContent = (data.converting_trigger || 'N/A').replace('_', ' ');
+    document.getElementById('rec-lat').value = device.registration_latitude || 'N/A';
+    document.getElementById('rec-lon').value = device.registration_longitude || 'N/A';
+    document.getElementById('rec-registered-at').value = device.registered_at || 'N/A';
+
+    if (data.recommendation) {
+        document.getElementById('product-recommendation').style.display = 'block';
+        document.getElementById('no-recommendation').style.display = 'none';
+        document.getElementById('rec-product-name').value = data.recommendation.name;
+        document.getElementById('rec-product-price').value = data.recommendation.price;
+        document.getElementById('rec-product-id').value = data.recommendation.id;
+    } else {
+        document.getElementById('product-recommendation').style.display = 'none';
+        document.getElementById('no-recommendation').style.display = 'block';
+    }
+
+    // Reset email section
+    document.getElementById('offer-email-preview').innerHTML = '<span class="text-secondary">Select a device and click "Generate Offer Email" to create a targeted product offer...</span>';
+    document.getElementById('offer-email-preview').setAttribute('contenteditable', 'false');
+    document.getElementById('offer-email-edit-hint').style.display = 'none';
+    document.getElementById('copy-offer-btn').disabled = true;
+    document.getElementById('send-offer-btn').disabled = true;
+}
+
+async function generateOfferEmail() {
+    if (!selectedDevice || !currentRecommendation) {
+        alert('Please select a device with a product recommendation first');
+        return;
+    }
+
+    document.getElementById('offer-email-loading').style.display = 'block';
+    document.getElementById('offer-email-preview').innerHTML = '<span class="text-secondary">Generating targeted offer email...</span>';
+
+    try {
+        const response = await fetch('/api/generate_offer_email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                driver_name: selectedDevice.driver_name,
+                device_id: selectedDevice.device_id,
+                state: document.getElementById('rec-state').textContent,
+                converting_trigger: document.getElementById('rec-trigger').textContent.replace(' ', '_'),
+                product: currentRecommendation
+            })
+        });
+
+        const data = await response.json();
+        document.getElementById('offer-email-loading').style.display = 'none';
+
+        if (data.status === 'success') {
+            document.getElementById('offer-email-preview').textContent = data.email_content;
+            document.getElementById('offer-email-preview').setAttribute('contenteditable', 'true');
+            document.getElementById('offer-email-edit-hint').style.display = 'block';
+            document.getElementById('copy-offer-btn').disabled = false;
+            document.getElementById('send-offer-btn').disabled = false;
+        } else {
+            document.getElementById('offer-email-preview').innerHTML = `<span class="text-danger">Error: ${data.error}</span>`;
+            document.getElementById('offer-email-preview').setAttribute('contenteditable', 'false');
+            document.getElementById('offer-email-edit-hint').style.display = 'none';
+        }
+    } catch (error) {
+        document.getElementById('offer-email-loading').style.display = 'none';
+        document.getElementById('offer-email-preview').innerHTML = `<span class="text-danger">Error: ${error.message}</span>`;
+        document.getElementById('offer-email-preview').setAttribute('contenteditable', 'false');
+        document.getElementById('offer-email-edit-hint').style.display = 'none';
+    }
+}
+
+function copyOfferEmail() {
+    const emailContent = document.getElementById('offer-email-preview').textContent;
+    navigator.clipboard.writeText(emailContent).then(() => {
+        const btn = document.getElementById('copy-offer-btn');
+        btn.innerHTML = '<i class="bi bi-check2 me-2"></i>Copied!';
+        setTimeout(() => {
+            btn.innerHTML = '<i class="bi bi-clipboard me-2"></i>Copy to Clipboard';
+        }, 2000);
+    });
+}
+
+function sendOfferEmail() {
+    alert('Offer email queued for sending! (Integration with email service required)');
+}
+</script>
+{% endblock %}

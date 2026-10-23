@@ -1,0 +1,578 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="analytics-v2">
+    <div class="page-header" style="margin-bottom:28px;">
+        <h1 class="page-title" style="font-size:2rem;font-weight:800;color:#FF3621;">Performance Insights</h1>
+        <p class="page-subtitle">Real-time embedded insurance analytics powered by Databricks</p>
+    </div>
+
+    <!-- Section 1: Hero KPIs -->
+    <div class="row g-3 mb-4" id="kpi-row">
+        <div class="col-md-3">
+            <div class="kpi-hero-card">
+                <div class="kpi-icon"><i class="bi bi-currency-dollar"></i></div>
+                <div class="kpi-number" id="kpi-revenue">--</div>
+                <div class="kpi-label">Total Revenue</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-hero-card">
+                <div class="kpi-icon"><i class="bi bi-shield-check"></i></div>
+                <div class="kpi-number" id="kpi-policies">--</div>
+                <div class="kpi-label">Active Policies</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-hero-card">
+                <div class="kpi-icon"><i class="bi bi-arrow-repeat"></i></div>
+                <div class="kpi-number" id="kpi-conversion">--</div>
+                <div class="kpi-label">Conversion Rate</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-hero-card">
+                <div class="kpi-icon"><i class="bi bi-pie-chart-fill"></i></div>
+                <div class="kpi-number" id="kpi-embedded">--</div>
+                <div class="kpi-label">Embedded Revenue %</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Growth Charts -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="glass-card">
+                <div class="glass-card-header">
+                    <i class="bi bi-bar-chart-fill me-2"></i>Policy Growth by Year
+                </div>
+                <div class="glass-card-body">
+                    <div id="chart-policy-growth" style="height:340px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="glass-card">
+                <div class="glass-card-header">
+                    <i class="bi bi-graph-up me-2"></i>Revenue by Year (Full Term vs Embedded)
+                </div>
+                <div class="glass-card-body">
+                    <div id="chart-revenue-growth" style="height:340px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3: Conversion by Region -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="glass-card">
+                <div class="glass-card-header">
+                    <i class="bi bi-geo-alt-fill me-2"></i>Conversion by Region
+                </div>
+                <div class="glass-card-body">
+                    <div id="chart-geo" style="height:400px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 4: Embedded Revenue by Product + Conversion Stats -->
+    <div class="row g-3 mb-4" style="align-items:stretch;">
+        <div class="col-md-6 d-flex">
+            <div class="glass-card w-100 d-flex flex-column">
+                <div class="glass-card-header">
+                    <i class="bi bi-cash-stack me-2"></i>Embedded Revenue by Product
+                </div>
+                <div class="glass-card-body" style="flex:1;">
+                    <div id="chart-product-revenue" style="height:100%;min-height:300px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 d-flex">
+            <div class="glass-card w-100">
+                <div class="glass-card-header">
+                    <i class="bi bi-bar-chart-steps me-2"></i>Conversion Stats
+                </div>
+                <div class="glass-card-body d-flex flex-column justify-content-center gap-3" style="padding:24px;">
+                    <div class="funnel-stat">
+                        <div class="funnel-stat-label">Offers Shown</div>
+                        <div class="funnel-stat-value" id="funnel-shown">--</div>
+                    </div>
+                    <div class="funnel-stat">
+                        <div class="funnel-stat-label">Offers Clicked</div>
+                        <div class="funnel-stat-value" id="funnel-clicked">--</div>
+                    </div>
+                    <div class="funnel-stat">
+                        <div class="funnel-stat-label">Conversions</div>
+                        <div class="funnel-stat-value" id="funnel-conversions">--</div>
+                    </div>
+                    <div class="funnel-stat" style="border-left:4px solid #FF3621; padding-left:12px;">
+                        <div class="funnel-stat-label">Click-Through Rate</div>
+                        <div class="funnel-stat-value" id="funnel-ctr">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 5: Sankey Chart -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="glass-card">
+                <div class="glass-card-header">
+                    <i class="bi bi-diagram-3-fill me-2"></i>What Offers Convert: Trigger &rarr; Trip Phase &rarr; Product
+                </div>
+                <div class="glass-card-body">
+                    <div id="chart-sankey" style="height:420px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 6: Driver Tiers -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="glass-card">
+                <div class="glass-card-header">
+                    <i class="bi bi-people-fill me-2"></i>Driver Risk Distribution
+                </div>
+                <div class="glass-card-body">
+                    <div id="chart-tiers-donut" style="height:340px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="glass-card">
+                <div class="glass-card-header">
+                    <i class="bi bi-speedometer2 me-2"></i>Average Score by Tier
+                </div>
+                <div class="glass-card-body d-flex flex-column justify-content-center gap-3" id="tier-stats">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 7: Driver Score Heatmap -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="glass-card">
+                <div class="glass-card-header">
+                    <i class="bi bi-scatter-chart me-2"></i>Driver Score Distribution by Risk Tier
+                </div>
+                <div class="glass-card-body">
+                    <div id="chart-score-heatmap" style="height:340px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 8: Deep Dive -->
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <a href="/analytics" class="deep-dive-btn">
+                <i class="bi bi-bar-chart-line me-2"></i>Open Detailed Dashboard
+                <i class="bi bi-arrow-right ms-2"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+/* ===== KPI Hero Cards ===== */
+.kpi-hero-card {
+    background: linear-gradient(145deg, #1c2128, #161b22);
+    border: 1px solid rgba(255,54,33,0.2);
+    border-radius: 16px;
+    padding: 24px 20px;
+    text-align: center;
+}
+.kpi-hero-card:hover {
+    border-color: rgba(255,54,33,0.5);
+    box-shadow: 0 8px 32px rgba(255,54,33,0.15);
+}
+.kpi-icon {
+    font-size: 28px;
+    color: #FF3621;
+    margin-bottom: 8px;
+}
+.kpi-number {
+    font-size: 32px;
+    font-weight: 800;
+    color: #e6edf3;
+    letter-spacing: -1px;
+    line-height: 1.1;
+    margin-bottom: 4px;
+}
+.kpi-label {
+    font-size: 13px;
+    color: #8b949e;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ===== Glass Cards ===== */
+.glass-card {
+    background: linear-gradient(145deg, rgba(28,33,40,0.95), rgba(22,27,34,0.95));
+    border: 1px solid rgba(255,54,33,0.12);
+    border-radius: 16px;
+    overflow: hidden;
+}
+.glass-card:hover {
+    border-color: rgba(255,54,33,0.3);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+.glass-card-header {
+    padding: 16px 20px;
+    font-weight: 600;
+    font-size: 15px;
+    color: #e6edf3;
+    border-bottom: 1px solid rgba(255,54,33,0.08);
+    background: linear-gradient(90deg, rgba(255,54,33,0.06), transparent);
+}
+.glass-card-body {
+    padding: 8px;
+}
+
+
+/* ===== Tier Stat Cards ===== */
+.tier-stat-card {
+    background: linear-gradient(145deg, #161b22, #1c2128);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.tier-stat-card .tier-name { font-weight:700; font-size:16px; text-transform:capitalize; color:#e6edf3; }
+.tier-stat-card .tier-score { font-size:28px; font-weight:800; }
+.tier-stat-card .tier-count { font-size:13px; color:#8b949e; margin-top:2px; }
+.tier-stat-card .tier-incidents { font-size:12px; color:#6b7280; }
+.tier-low { border-left: 4px solid #8b949e; }
+.tier-medium { border-left: 4px solid #ff8a70; }
+.tier-high { border-left: 4px solid #FF3621; }
+
+/* ===== Funnel Stats ===== */
+.funnel-stat {
+    background: linear-gradient(145deg, #161b22, #1c2128);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 14px 18px;
+}
+.funnel-stat-label {
+    font-size: 12px;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+.funnel-stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #e6edf3;
+}
+
+/* ===== Deep Dive Button ===== */
+.deep-dive-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 16px 48px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #FF3621, #cc2b1a);
+    border: none;
+    border-radius: 12px;
+    text-decoration: none;
+    box-shadow: 0 4px 20px rgba(255,54,33,0.3);
+}
+.deep-dive-btn:hover {
+    box-shadow: 0 8px 32px rgba(255,54,33,0.5);
+    color: #fff;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<script>
+const C = {
+    bg: '#1c2128',
+    paper: '#1c2128',
+    font: '#e6edf3',
+    grid: '#30363d',
+    red:      '#FF3621',
+    ltRed:    '#FF6A4D',
+    salmon:   '#ff8a70',
+    dkRed:    '#cc2b1a',
+    deepRed:  '#991f14',
+    gray:     '#4a4a4a',
+    muted:    '#8b949e'
+};
+
+const PLOTLY_LAYOUT = {
+    paper_bgcolor: C.paper,
+    plot_bgcolor: C.bg,
+    font: { color: C.font, family: '-apple-system, BlinkMacSystemFont, sans-serif' },
+    margin: { t: 30, b: 40, l: 50, r: 20 },
+    xaxis: { gridcolor: C.grid, zerolinecolor: C.grid },
+    yaxis: { gridcolor: C.grid, zerolinecolor: C.grid },
+};
+
+function fmt$(n) {
+    if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
+    return '$' + n.toFixed(0);
+}
+function fmtN(n) {
+    return n.toLocaleString();
+}
+
+// ---- KPIs ----
+fetch('/api/analytics/kpis')
+    .then(r => r.json())
+    .then(j => {
+        if (j.status !== 'success') return;
+        const d = j.data;
+        document.getElementById('kpi-revenue').textContent = fmt$(d.total_revenue);
+        document.getElementById('kpi-policies').textContent = fmtN(d.active_policies);
+        document.getElementById('kpi-conversion').textContent = d.conversion_rate + '%';
+        document.getElementById('kpi-embedded').textContent = d.embedded_pct + '%';
+    });
+
+// ---- Growth ----
+fetch('/api/analytics/growth')
+    .then(r => r.json())
+    .then(j => {
+        if (j.status !== 'success') return;
+        const data = j.data;
+        const years = [...new Set(data.map(d => d.year))].sort();
+
+        const ftCounts = years.map(y => {
+            const row = data.find(d => d.year === y && d.policy_type === 'full_term');
+            return row ? row.policy_count : 0;
+        });
+        const emCounts = years.map(y => {
+            const row = data.find(d => d.year === y && d.policy_type === 'embedded_trip');
+            return row ? row.policy_count : 0;
+        });
+
+        Plotly.newPlot('chart-policy-growth', [
+            { x: years, y: ftCounts, name: 'Full Term', type: 'bar', marker: { color: C.red } },
+            { x: years, y: emCounts, name: 'Embedded', type: 'bar', marker: { color: C.salmon } }
+        ], {
+            ...PLOTLY_LAYOUT, barmode: 'group',
+            legend: { font: { color: C.font }, bgcolor: 'rgba(0,0,0,0)' },
+            bargap: 0.3
+        }, { responsive: true, displayModeBar: false });
+
+        const ftRev = years.map(y => {
+            const row = data.find(d => d.year === y && d.policy_type === 'full_term');
+            return row ? row.total_premium : 0;
+        });
+        const emRev = years.map(y => {
+            const row = data.find(d => d.year === y && d.policy_type === 'embedded_trip');
+            return row ? row.total_premium : 0;
+        });
+
+        Plotly.newPlot('chart-revenue-growth', [
+            { x: years, y: ftRev, name: 'Full Term', type: 'bar', marker: { color: C.red } },
+            { x: years, y: emRev, name: 'Embedded', type: 'bar', marker: { color: C.ltRed } }
+        ], {
+            ...PLOTLY_LAYOUT, barmode: 'stack',
+            legend: { font: { color: C.font }, bgcolor: 'rgba(0,0,0,0)' },
+            bargap: 0.3
+        }, { responsive: true, displayModeBar: false });
+    });
+
+// ---- Conversion by Region ----
+fetch('/api/analytics/geo')
+    .then(r => r.json())
+    .then(j => {
+        if (j.status !== 'success') return;
+        const data = j.data;
+
+        const states = data.map(d => d.state);
+        const counts = data.map(d => d.trip_count);
+
+        Plotly.newPlot('chart-geo', [{
+            x: states, y: counts,
+            type: 'bar',
+            marker: { color: C.red },
+            hovertemplate: '%{x}<br>Trips: %{y:,}<extra></extra>'
+        }], {
+            ...PLOTLY_LAYOUT,
+            xaxis: { ...PLOTLY_LAYOUT.xaxis, tickangle: -45, tickfont: { size: 10 } },
+            showlegend: false,
+            bargap: 0.15
+        }, { responsive: true, displayModeBar: false });
+    });
+
+// ---- Conversion Stats ----
+fetch('/api/analytics/funnel')
+    .then(r => r.json())
+    .then(j => {
+        if (j.status !== 'success') return;
+        const f = j.data;
+        document.getElementById('funnel-shown').textContent = fmtN(f.total_offers_shown);
+        document.getElementById('funnel-clicked').textContent = fmtN(f.total_offers_clicked);
+        document.getElementById('funnel-conversions').textContent = fmtN(f.total_conversions);
+        document.getElementById('funnel-ctr').textContent = f.click_through_rate + '%';
+    });
+
+// ---- Embedded Revenue by Product ----
+fetch('/api/analytics/product_revenue')
+    .then(r => r.json())
+    .then(j => {
+        console.log('product_revenue response:', j);
+        if (j.status !== 'success') { console.error('product_revenue failed:', j); return; }
+        const products = j.data;
+        if (!products || products.length === 0) { console.warn('product_revenue: no data'); return; }
+        Plotly.newPlot('chart-product-revenue', [{
+            type: 'bar',
+            x: products.map(p => p.product_name),
+            y: products.map(p => p.total_revenue),
+            marker: { color: [C.red, C.salmon, C.ltRed, C.muted].slice(0, products.length) },
+            text: products.map(p => '$' + p.total_revenue.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})),
+            textposition: 'outside',
+            textfont: { color: C.muted, size: 11 },
+            hovertemplate: '%{x}<br>Revenue: $%{y:,.2f}<extra></extra>'
+        }], {
+            ...PLOTLY_LAYOUT,
+            margin: { t: 30, b: 100, l: 70, r: 20 },
+            xaxis: { ...PLOTLY_LAYOUT.xaxis, tickangle: -25 },
+            yaxis: { ...PLOTLY_LAYOUT.yaxis, title: { text: 'Revenue ($)', font: { color: C.muted } } },
+            showlegend: false,
+            bargap: 0.3
+        }, { responsive: true, displayModeBar: false });
+    })
+    .catch(e => console.error('product_revenue fetch error:', e));
+
+// ---- Sankey ----
+fetch('/api/analytics/sankey')
+    .then(r => r.json())
+    .then(j => {
+        if (j.status !== 'success') return;
+        const d = j.data;
+        const nodeNames = d.nodes.map(n => n.name);
+
+        const triggers = ['leaving_home_zone','rough_road_conditions','bad_neighborhood','inclement_weather'];
+        const nodeColors = nodeNames.map(n => {
+            if (triggers.includes(n)) return C.red;
+            if (n.toLowerCase().includes('start') || n.toLowerCase().includes('middle') ||
+                n.toLowerCase().includes('end') || n.toLowerCase().includes('phase')) return C.salmon;
+            return C.ltRed;
+        });
+
+        const linkColors = d.links.map(l => {
+            const srcName = nodeNames[l.source];
+            if (triggers.includes(srcName)) return 'rgba(255,54,33,0.18)';
+            return 'rgba(255,106,77,0.15)';
+        });
+
+        Plotly.newPlot('chart-sankey', [{
+            type: 'sankey',
+            orientation: 'h',
+            node: {
+                pad: 20, thickness: 24,
+                label: nodeNames,
+                color: nodeColors,
+                line: { color: '#30363d', width: 0.5 }
+            },
+            link: {
+                source: d.links.map(l => l.source),
+                target: d.links.map(l => l.target),
+                value: d.links.map(l => l.value),
+                color: linkColors
+            }
+        }], {
+            ...PLOTLY_LAYOUT,
+            margin: { t: 20, b: 20, l: 10, r: 10 }
+        }, { responsive: true, displayModeBar: false });
+    });
+
+// ---- Tiers ----
+fetch('/api/analytics/tiers')
+    .then(r => r.json())
+    .then(j => {
+        if (j.status !== 'success') return;
+        const data = j.data;
+
+        const tierColors = { low: C.muted, medium: C.salmon, high: C.red };
+        const labels = data.map(d => d.risk_tier);
+        const values = data.map(d => d.driver_count);
+        const colors = data.map(d => tierColors[d.risk_tier] || C.gray);
+
+        Plotly.newPlot('chart-tiers-donut', [{
+            type: 'pie',
+            labels: labels,
+            values: values,
+            hole: 0.6,
+            marker: { colors: colors, line: { color: C.bg, width: 3 } },
+            textinfo: 'label+percent',
+            textfont: { color: '#fff', size: 13 },
+            pull: [0.02, 0.02, 0.05]
+        }], {
+            ...PLOTLY_LAYOUT,
+            margin: { t: 20, b: 20, l: 20, r: 20 },
+            showlegend: false
+        }, { responsive: true, displayModeBar: false });
+
+        // Tier stat cards
+        const container = document.getElementById('tier-stats');
+        container.innerHTML = '';
+        data.forEach(d => {
+            const scoreColor = tierColors[d.risk_tier] || C.muted;
+            container.innerHTML += `
+                <div class="tier-stat-card tier-${d.risk_tier}">
+                    <div>
+                        <div class="tier-name">${d.risk_tier} Risk</div>
+                        <div class="tier-count">${fmtN(d.driver_count)} drivers</div>
+                        <div class="tier-incidents">${fmtN(d.total_incidents)} total incidents</div>
+                    </div>
+                    <div class="tier-score" style="color:${scoreColor}">${d.avg_score}</div>
+                </div>
+            `;
+        });
+    });
+
+// ---- Score Scatter ----
+fetch('/api/analytics/score_heatmap')
+    .then(r => r.json())
+    .then(j => {
+        if (j.status !== 'success') return;
+        const data = j.data;
+
+        const tiers = [...new Set(data.map(d => d.risk_tier))];
+        const tierColors = { low: C.muted, medium: C.salmon, high: C.red };
+
+        const traces = tiers.map(tier => {
+            const tierData = data.filter(d => d.risk_tier === tier);
+            return {
+                x: tierData.map(d => d.total_miles),
+                y: tierData.map(d => d.current_driving_score),
+                name: tier,
+                mode: 'markers',
+                type: 'scatter',
+                marker: {
+                    color: tierColors[tier] || C.gray,
+                    size: 7,
+                    opacity: 0.7
+                },
+                hovertemplate: '%{text}<br>Miles: %{x:,.0f}<br>Score: %{y:.1f}<extra></extra>',
+                text: tierData.map(d => d.driver_name)
+            };
+        });
+
+        Plotly.newPlot('chart-score-heatmap', traces, {
+            ...PLOTLY_LAYOUT,
+            legend: { font: { color: C.font }, bgcolor: 'rgba(0,0,0,0)' },
+            xaxis: { ...PLOTLY_LAYOUT.xaxis, title: { text: 'Total Miles', font: { color: C.muted } } },
+            yaxis: { ...PLOTLY_LAYOUT.yaxis, title: { text: 'Driving Score', font: { color: C.muted } } }
+        }, { responsive: true, displayModeBar: false });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,584 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Agent Actions</h1>
+    <p class="page-subtitle">Manage driver offers and send personalized retention emails</p>
+</div>
+
+<div class="row g-4">
+    <!-- Driver Selection Panel -->
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-people-fill me-2"></i>Select Driver</span>
+                <button class="btn btn-outline-secondary btn-sm" onclick="loadDrivers()">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="p-3 border-bottom" style="border-color: var(--border-color) !important;">
+                    <input type="text" class="form-control" id="driver-search" placeholder="Search by name or device ID..." oninput="filterDrivers()">
+                </div>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover mb-0" id="drivers-table">
+                        <thead>
+                            <tr>
+                                <th>Driver</th>
+                                <th>Score</th>
+                                <th>Risk</th>
+                            </tr>
+                        </thead>
+                        <tbody id="drivers-tbody">
+                            <tr><td colspan="3" class="text-center text-secondary py-4">Loading drivers...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Driver Details & Adjustments -->
+    <div class="col-lg-7">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-person-badge me-2"></i>Driver Details & Policy Adjustment
+            </div>
+            <div class="card-body">
+                <div id="driver-details-placeholder" class="text-center text-secondary py-5">
+                    <i class="bi bi-arrow-left-circle" style="font-size: 48px; opacity: 0.5;"></i>
+                    <p class="mt-3">Select a driver from the list to view details</p>
+                </div>
+
+                <div id="driver-details-content" style="display: none;">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="stat-card">
+                                <div class="stat-icon blue"><i class="bi bi-person-fill"></i></div>
+                                <div class="stat-content">
+                                    <h4 id="detail-driver-name">-</h4>
+                                    <p id="detail-vehicle-info">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-icon green"><i class="bi bi-speedometer2"></i></div>
+                                <div class="stat-content">
+                                    <h4 id="detail-driving-score">-</h4>
+                                    <p>Driving Score</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-icon purple"><i class="bi bi-geo-alt-fill"></i></div>
+                                <div class="stat-content">
+                                    <h4 id="detail-total-trips">-</h4>
+                                    <p>Total Trips</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Total Miles</label>
+                            <input type="text" class="form-control" id="detail-total-miles" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Risk Tier</label>
+                            <input type="text" class="form-control" id="detail-risk-tier" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Coverage Level</label>
+                            <input type="text" class="form-control" id="detail-coverage-level" readonly>
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--border-color);">
+
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="mb-0"><i class="bi bi-sliders me-2"></i>Adjust Premium & Discount</h6>
+                        <button class="btn btn-outline-info btn-sm" onclick="runAiForecast()" id="ai-forecast-btn" disabled>
+                            <i class="bi bi-stars me-1"></i>AI Forecast
+                        </button>
+                    </div>
+
+                    <!-- AI Forecast Result -->
+                    <div id="ai-forecast-loading" class="loading-bar mb-3" style="display: none;"></div>
+                    <div id="ai-forecast-result" class="mb-3" style="display: none;">
+                        <div class="p-3 rounded" style="background: var(--card-bg); border: 1px solid var(--accent-blue); border-left: 4px solid var(--accent-blue);">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-robot me-2" style="color: var(--accent-blue);"></i>
+                                <strong style="color: var(--accent-blue);">AI Recommendation</strong>
+                                <span class="badge ms-2" id="ai-risk-badge">-</span>
+                            </div>
+                            <p class="mb-2" id="ai-explanation" style="font-size: 0.9rem; color: var(--text-secondary);"></p>
+                            <div class="row">
+                                <div class="col-auto">
+                                    <small class="text-secondary">Avg Trip Score</small>
+                                    <div class="fw-bold" id="ai-avg-score" style="color: var(--text-primary, #fff);">-</div>
+                                </div>
+                                <div class="col-auto">
+                                    <small class="text-secondary">Total Incidents</small>
+                                    <div class="fw-bold" id="ai-total-incidents" style="color: var(--text-primary, #fff);">-</div>
+                                </div>
+                                <div class="col-auto">
+                                    <small class="text-secondary">Night Driving</small>
+                                    <div class="fw-bold" id="ai-night-pct" style="color: var(--text-primary, #fff);">-</div>
+                                </div>
+                                <div class="col-auto">
+                                    <small class="text-secondary">High Risk Area</small>
+                                    <div class="fw-bold" id="ai-risk-pct" style="color: var(--text-primary, #fff);">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Current Premium</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text" class="form-control" id="current-premium" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">New Premium</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="new-premium" step="0.01" min="0" oninput="recomputeNewDiscount()">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Current Discount</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="current-discount" readonly>
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">New Discount</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="new-discount" step="0.1" min="0" max="50" oninput="recomputeNewPremium()">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 align-items-center mb-2">
+                        <button class="btn btn-outline-info btn-sm" onclick="predictDiscount()" id="predict-discount-btn" disabled>
+                            <i class="bi bi-magic me-1"></i>Predict Discount
+                        </button>
+                        <span id="save-status" class="text-info"></span>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" onclick="saveChanges()" id="save-changes-btn" disabled>
+                            <i class="bi bi-check-lg me-2"></i>Save Changes to Policy
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Generation -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-envelope-paper me-2"></i>Generate Personalized Email
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Email Type</label>
+                        <select class="form-select" id="email-type">
+                            <option value="retention_premium">Premium Reduction</option>
+                            <option value="retention_loyalty">Loyalty Reward</option>
+                            <option value="new_customer">New Customer Acquisition</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button class="btn btn-primary w-100" onclick="generateEmail()" id="generate-email-btn" disabled>
+                            <i class="bi bi-stars me-2"></i>Generate Email
+                        </button>
+                    </div>
+                </div>
+
+                <div id="email-loading" class="loading-bar mb-3" style="display: none;"></div>
+
+                <label class="form-label">Generated Email</label>
+                <div class="email-preview" id="email-preview" contenteditable="false" spellcheck="true">
+                    <span class="text-secondary">Click "Generate Email" to create a personalized message for the selected driver...</span>
+                </div>
+                <small class="text-secondary mt-1" id="email-edit-hint" style="display: none;"><i class="bi bi-pencil me-1"></i>You can edit the email above before copying or sending.</small>
+
+                <div class="d-flex gap-2 mt-3">
+                    <button class="btn btn-secondary" onclick="copyEmail()" id="copy-email-btn" disabled>
+                        <i class="bi bi-clipboard me-2"></i>Copy to Clipboard
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="sendEmail()" id="send-email-btn" disabled>
+                        <i class="bi bi-send me-2"></i>Send Email
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allDrivers = [];
+let selectedDriver = null;
+
+document.addEventListener('DOMContentLoaded', loadDrivers);
+
+async function loadDrivers() {
+    const tbody = document.getElementById('drivers-tbody');
+    tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4"><div class="loading-bar"></div></td></tr>';
+
+    try {
+        const response = await fetch('/api/drivers');
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            allDrivers = data.data;
+            renderDrivers(allDrivers);
+        } else {
+            tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">Error: ${data.message}</td></tr>`;
+        }
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">Error: ${error.message}</td></tr>`;
+    }
+}
+
+function renderDrivers(drivers) {
+    const tbody = document.getElementById('drivers-tbody');
+
+    if (!drivers || drivers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-secondary py-4">No drivers found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = drivers.map(d => `
+        <tr onclick="selectDriver('${d.device_id}')" style="cursor: pointer;">
+            <td>
+                <div class="fw-semibold">${d.driver_name || 'Unknown'}</div>
+                <small class="text-secondary">${d.device_id?.substring(0, 12)}...</small>
+            </td>
+            <td>
+                <span class="fw-bold" style="color: ${getScoreColor(d.current_driving_score)}">${d.current_driving_score || 0}</span>
+            </td>
+            <td>
+                <span class="badge-risk ${(d.risk_tier || 'medium').toLowerCase()}">${d.risk_tier || 'N/A'}</span>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function getScoreColor(score) {
+    if (score >= 80) return 'var(--accent-green)';
+    if (score >= 60) return '#e3b341';
+    return '#f85149';
+}
+
+function filterDrivers() {
+    const search = document.getElementById('driver-search').value.toLowerCase();
+    const filtered = allDrivers.filter(d =>
+        (d.driver_name || '').toLowerCase().includes(search) ||
+        (d.device_id || '').toLowerCase().includes(search)
+    );
+    renderDrivers(filtered);
+}
+
+async function selectDriver(deviceId) {
+    try {
+        const response = await fetch(`/api/driver/${deviceId}`);
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            selectedDriver = data.data;
+            displayDriverDetails(selectedDriver);
+            document.getElementById('generate-email-btn').disabled = false;
+            document.getElementById('save-changes-btn').disabled = false;
+            document.getElementById('predict-discount-btn').disabled = false;
+        } else {
+            alert('Error loading driver: ' + data.message);
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+function displayDriverDetails(driver) {
+    console.log('Driver data:', driver);
+
+    document.getElementById('driver-details-placeholder').style.display = 'none';
+    document.getElementById('driver-details-content').style.display = 'block';
+
+    document.getElementById('detail-driver-name').textContent = driver.driver_name || 'Unknown';
+    document.getElementById('detail-vehicle-info').textContent = driver.vehicle_info || 'No vehicle info';
+    document.getElementById('detail-driving-score').textContent = driver.current_driving_score || '0';
+    document.getElementById('detail-total-trips').textContent = driver.total_trips || '0';
+    document.getElementById('detail-total-miles').value = (driver.total_miles || 0).toLocaleString();
+    document.getElementById('detail-risk-tier').value = driver.risk_tier || 'N/A';
+    document.getElementById('detail-coverage-level').value = driver.coverage_level || 'N/A';
+
+    const premium = Number(driver.premium_amount) || 0;
+    const discount = Number(driver.discount_pct) || 0;
+    console.log('Premium:', premium, 'Discount:', discount);
+
+    document.getElementById('current-premium').value = premium.toFixed(2);
+    document.getElementById('current-discount').value = discount;
+    document.getElementById('new-discount').value = discount;
+    recomputeNewPremium();
+
+    document.getElementById('save-status').textContent = '';
+    document.getElementById('ai-forecast-btn').disabled = false;
+    document.getElementById('ai-forecast-result').style.display = 'none';
+}
+
+async function runAiForecast() {
+    if (!selectedDriver) {
+        alert('Please select a driver first');
+        return;
+    }
+
+    const btn = document.getElementById('ai-forecast-btn');
+    const loading = document.getElementById('ai-forecast-loading');
+    const resultDiv = document.getElementById('ai-forecast-result');
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Analyzing...';
+    loading.style.display = 'block';
+    resultDiv.style.display = 'none';
+
+    try {
+        const currentPremium = parseFloat(document.getElementById('current-premium').value) || 0;
+        const currentDiscount = parseFloat(document.getElementById('current-discount').value) || 0;
+
+        const response = await fetch(`/api/driver/${selectedDriver.device_id}/ai_forecast`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ current_premium: currentPremium, current_discount: currentDiscount })
+        });
+
+        const data = await response.json();
+        loading.style.display = 'none';
+
+        if (data.status === 'success') {
+            const f = data.forecast;
+            const b = data.behavior_summary;
+
+            // Auto-fill new premium and compute discount from premium difference
+            document.getElementById('new-premium').value = f.new_premium.toFixed(2);
+            const curPrem = parseFloat(document.getElementById('current-premium').value) || 0;
+            const computedDiscount = curPrem > 0 ? Math.round(((curPrem - f.new_premium) / curPrem) * 100) : 0;
+            document.getElementById('new-discount').value = Math.max(0, computedDiscount);
+
+            // Show explanation
+            document.getElementById('ai-explanation').textContent = f.explanation;
+
+            // Risk badge
+            const badge = document.getElementById('ai-risk-badge');
+            badge.textContent = f.risk_assessment.toUpperCase() + ' RISK';
+            badge.className = 'badge ms-2';
+            if (f.risk_assessment === 'low') badge.classList.add('bg-success');
+            else if (f.risk_assessment === 'high') badge.classList.add('bg-danger');
+            else badge.classList.add('bg-warning', 'text-dark');
+
+            // Behavior stats
+            document.getElementById('ai-avg-score').textContent = b.avg_trip_score || '-';
+            document.getElementById('ai-total-incidents').textContent = b.total_incidents || '0';
+            document.getElementById('ai-night-pct').textContent = (b.avg_night_driving_pct || '0') + '%';
+            document.getElementById('ai-risk-pct').textContent = (b.avg_high_risk_pct || '0') + '%';
+
+            resultDiv.style.display = 'block';
+        } else {
+            alert('AI Forecast error: ' + (data.message || 'Unknown error'));
+        }
+    } catch (error) {
+        loading.style.display = 'none';
+        alert('Error: ' + error.message);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-stars me-1"></i>AI Forecast';
+}
+
+function undiscountedBase() {
+    const currentPremium = parseFloat(document.getElementById('current-premium').value) || 0;
+    const currentDiscount = parseFloat(document.getElementById('current-discount').value) || 0;
+    return currentDiscount < 100
+        ? currentPremium / (1 - currentDiscount / 100)
+        : currentPremium;
+}
+
+function recomputeNewPremium() {
+    const newDiscount = parseFloat(document.getElementById('new-discount').value) || 0;
+    const newPremium = undiscountedBase() * (1 - newDiscount / 100);
+    document.getElementById('new-premium').value = newPremium.toFixed(2);
+}
+
+function recomputeNewDiscount() {
+    const base = undiscountedBase();
+    if (base <= 0) return;
+    const newPremium = parseFloat(document.getElementById('new-premium').value);
+    if (isNaN(newPremium)) return;
+    let newDiscount = (1 - newPremium / base) * 100;
+    newDiscount = Math.max(0, Math.min(50, newDiscount));
+    document.getElementById('new-discount').value = newDiscount.toFixed(1);
+}
+
+async function predictDiscount() {
+    if (!selectedDriver) {
+        alert('Please select a driver first');
+        return;
+    }
+
+    const btn = document.getElementById('predict-discount-btn');
+    const statusEl = document.getElementById('save-status');
+    const originalBtnHtml = btn.innerHTML;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Predicting...';
+    statusEl.textContent = '';
+
+    try {
+        const response = await fetch(`/api/driver/${selectedDriver.device_id}/forecast`);
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            const currentDiscount = parseFloat(document.getElementById('current-discount').value) || 0;
+            const predictedDiscount = Number(data.predicted_discount_pct);
+            if (predictedDiscount === currentDiscount) {
+                statusEl.innerHTML = `<i class="bi bi-info-circle me-1"></i>No changes — predicted discount (${predictedDiscount}%) matches the current`;
+                statusEl.className = 'align-self-center text-secondary';
+            } else {
+                document.getElementById('new-discount').value = predictedDiscount;
+                recomputeNewPremium();
+                const newPremium = document.getElementById('new-premium').value;
+                statusEl.textContent = `Predicted discount ${predictedDiscount}% → new premium $${newPremium}`;
+                statusEl.className = 'text-info';
+            }
+        } else {
+            statusEl.textContent = 'Prediction error: ' + (data.message || 'unknown');
+            statusEl.className = 'align-self-center text-danger';
+        }
+    } catch (error) {
+        statusEl.textContent = 'Prediction error: ' + error.message;
+        statusEl.className = 'align-self-center text-danger';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHtml;
+    }
+}
+
+async function saveChanges() {
+    if (!selectedDriver) {
+        alert('Please select a driver first');
+        return;
+    }
+
+    const newPremium = parseFloat(document.getElementById('new-premium').value);
+    const newDiscount = parseFloat(document.getElementById('new-discount').value);
+    const statusEl = document.getElementById('save-status');
+
+    statusEl.textContent = 'Saving...';
+    statusEl.className = 'align-self-center text-muted';
+
+    try {
+        const response = await fetch(`/api/driver/${selectedDriver.device_id}/update_policy`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                new_premium: newPremium,
+                new_discount: newDiscount,
+                policy_id: selectedDriver.policy_id
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            statusEl.textContent = 'Saved successfully!';
+            statusEl.className = 'align-self-center text-success';
+            // Update current values
+            document.getElementById('current-premium').value = newPremium.toFixed(2);
+            document.getElementById('current-discount').value = newDiscount;
+            selectedDriver.premium_amount = newPremium;
+            selectedDriver.discount_pct = newDiscount;
+        } else {
+            statusEl.textContent = 'Error: ' + data.message;
+            statusEl.className = 'align-self-center text-danger';
+        }
+    } catch (error) {
+        statusEl.textContent = 'Error: ' + error.message;
+        statusEl.className = 'align-self-center text-danger';
+    }
+}
+
+async function generateEmail() {
+    if (!selectedDriver) {
+        alert('Please select a driver first');
+        return;
+    }
+
+    const emailType = document.getElementById('email-type').value;
+    const newPremium = parseFloat(document.getElementById('new-premium').value) || 0;
+    const newDiscount = parseFloat(document.getElementById('new-discount').value) || 0;
+
+    const driverData = {
+        ...selectedDriver,
+        new_premium: newPremium,
+        new_discount: newDiscount
+    };
+
+    document.getElementById('email-loading').style.display = 'block';
+    document.getElementById('email-preview').innerHTML = '<span class="text-secondary">Generating personalized email...</span>';
+
+    try {
+        const response = await fetch('/api/generate_email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ driver_data: driverData, email_type: emailType })
+        });
+
+        const data = await response.json();
+        document.getElementById('email-loading').style.display = 'none';
+
+        if (data.status === 'success') {
+            document.getElementById('email-preview').textContent = data.email_content;
+            document.getElementById('email-preview').setAttribute('contenteditable', 'true');
+            document.getElementById('email-edit-hint').style.display = 'block';
+            document.getElementById('copy-email-btn').disabled = false;
+            document.getElementById('send-email-btn').disabled = false;
+        } else {
+            document.getElementById('email-preview').innerHTML = `<span class="text-danger">Error: ${data.error}</span>`;
+            document.getElementById('email-preview').setAttribute('contenteditable', 'false');
+            document.getElementById('email-edit-hint').style.display = 'none';
+        }
+    } catch (error) {
+        document.getElementById('email-loading').style.display = 'none';
+        document.getElementById('email-preview').innerHTML = `<span class="text-danger">Error: ${error.message}</span>`;
+        document.getElementById('email-preview').setAttribute('contenteditable', 'false');
+        document.getElementById('email-edit-hint').style.display = 'none';
+    }
+}
+
+function copyEmail() {
+    const emailContent = document.getElementById('email-preview').textContent;
+    navigator.clipboard.writeText(emailContent).then(() => {
+        const btn = document.getElementById('copy-email-btn');
+        btn.innerHTML = '<i class="bi bi-check2 me-2"></i>Copied!';
+        setTimeout(() => {
+            btn.innerHTML = '<i class="bi bi-clipboard me-2"></i>Copy to Clipboard';
+        }, 2000);
+    });
+}
+
+function sendEmail() {
+    alert('Email queued for sending! (Integration with email service required)');
+}
+</script>
+{% endblock %}

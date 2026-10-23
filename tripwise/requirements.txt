@@ -1,0 +1,7 @@
+flask
+python-dotenv
+databricks-sdk>=0.40.0
+pandas
+PyYAML
+requests
+psycopg2-binary

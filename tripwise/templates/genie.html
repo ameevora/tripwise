@@ -1,0 +1,182 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title">AI Assistant</h1>
+            <p class="page-subtitle">Ask questions about your insurance data using natural language</p>
+        </div>
+        <button id="new-conversation-btn" class="btn btn-outline-secondary">
+            <i class="bi bi-plus-lg"></i> New Chat
+        </button>
+    </div>
+</div>
+
+<div class="chat-container">
+    <div class="welcome-banner" id="welcome-message">
+        <h4>Hi {{ first_name }}! I'm your Tripwise AI Assistant</h4>
+        <p>I can help you explore driver behavior, conversion rates, offer performance, and more. Ask me anything about your insurance data!</p>
+    </div>
+
+    <div class="sample-questions" id="sample-questions">
+        <button class="sample-btn" onclick="handleSampleQuery('What are the top converting offer triggers?')">
+            Top converting offer triggers
+        </button>
+        <button class="sample-btn" onclick="handleSampleQuery('Show me drivers with the highest driving scores')">
+            Top drivers by score
+        </button>
+        <button class="sample-btn" onclick="handleSampleQuery('Which trip phase has the best conversion rate?')">
+            Best trip phase for offers
+        </button>
+        <button class="sample-btn" onclick="handleSampleQuery('How many active policies do we have?')">
+            Active policies count
+        </button>
+    </div>
+
+    <div class="conversation-history" id="conversation-history">
+        <!-- Messages will be inserted here -->
+    </div>
+
+    <div id="loading-bar" class="loading-bar" style="display: none;"></div>
+
+    <div class="chat-input-container">
+        <form id="genie-form" class="chat-input-wrapper">
+            <input
+                type="text"
+                id="user-query"
+                class="chat-input"
+                placeholder="Ask a question about your insurance data..."
+                required
+                autocomplete="off"
+            />
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-send-fill"></i> Send
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let conversationId = null;
+let messageId = null;
+
+const conversationHistory = document.getElementById('conversation-history');
+const welcomeMessage = document.getElementById('welcome-message');
+const sampleQuestions = document.getElementById('sample-questions');
+const loadingBar = document.getElementById('loading-bar');
+const genieForm = document.getElementById('genie-form');
+const userQueryInput = document.getElementById('user-query');
+
+function addMessage(content, isUser = false) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'message-avatar';
+    avatar.innerHTML = isUser ? '<i class="bi bi-person-fill"></i>' : '<i class="bi bi-stars"></i>';
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+
+    // Parse content - could be JSON table or text
+    try {
+        const parsed = JSON.parse(content);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            contentDiv.innerHTML = renderTable(parsed);
+        } else {
+            contentDiv.innerHTML = marked.parse(content);
+        }
+    } catch {
+        contentDiv.innerHTML = marked.parse(content);
+    }
+
+    messageDiv.appendChild(avatar);
+    messageDiv.appendChild(contentDiv);
+    conversationHistory.appendChild(messageDiv);
+    conversationHistory.scrollTop = conversationHistory.scrollHeight;
+}
+
+function renderTable(data) {
+    if (!data || data.length === 0) return '<p>No data available</p>';
+
+    const headers = Object.keys(data[0]);
+    let html = '<div class="table-responsive"><table class="table table-sm"><thead><tr>';
+    headers.forEach(h => html += `<th>${h}</th>`);
+    html += '</tr></thead><tbody>';
+
+    data.slice(0, 20).forEach(row => {
+        html += '<tr>';
+        headers.forEach(h => html += `<td>${row[h] ?? ''}</td>`);
+        html += '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+    if (data.length > 20) html += `<p class="text-muted small">Showing 20 of ${data.length} rows</p>`;
+    return html;
+}
+
+async function sendQuery(question) {
+    // Hide welcome and samples on first message
+    if (welcomeMessage) welcomeMessage.style.display = 'none';
+    if (sampleQuestions) sampleQuestions.style.display = 'none';
+
+    addMessage(question, true);
+    loadingBar.style.display = 'block';
+
+    const endpoint = conversationId
+        ? '/api/genie/continue_conversation'
+        : '/api/genie/start_conversation';
+
+    const payload = { question };
+    if (conversationId) payload.conversation_id = conversationId;
+
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        loadingBar.style.display = 'none';
+
+        if (data.error) {
+            addMessage(`Error: ${data.error}`);
+        } else {
+            conversationId = data.conversation_id;
+            messageId = data.message_id;
+            addMessage(data.content);
+        }
+    } catch (error) {
+        loadingBar.style.display = 'none';
+        addMessage(`Error: ${error.message}`);
+    }
+}
+
+function handleSampleQuery(question) {
+    userQueryInput.value = question;
+    sendQuery(question);
+    userQueryInput.value = '';
+}
+
+genieForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const question = userQueryInput.value.trim();
+    if (question) {
+        sendQuery(question);
+        userQueryInput.value = '';
+    }
+});
+
+document.getElementById('new-conversation-btn').addEventListener('click', () => {
+    conversationId = null;
+    messageId = null;
+    conversationHistory.innerHTML = '';
+    if (welcomeMessage) welcomeMessage.style.display = 'block';
+    if (sampleQuestions) sampleQuestions.style.display = 'flex';
+});
+</script>
+{% endblock %}

@@ -1,0 +1,699 @@
+{
+  "space_id": "01f15d6cfd4a14c29378cffba250e64b",
+  "title": "Insurance Trip and Driver Analytics",
+  "warehouse_id": "22ad910fe1aed92d",
+  "serialized_space": {
+    "version": 2,
+    "data_sources": {
+      "tables": [
+        {
+          "identifier": "serverless_stable_mv5gxq_catalog.insurance_trip_wise.agg_driver_conversions",
+          "column_configs": [
+            {
+              "column_name": "conversion_date",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "converting_product",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "converting_trigger",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "days_to_convert",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "device_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "discount_earned_pct",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "driver_name",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "driving_score_at_conversion",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "offers_seen_before_conversion",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "premium_monthly",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "registration_date",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "trip_phase_at_conversion",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "trips_to_convert",
+              "enable_format_assistance": true
+            }
+          ]
+        },
+        {
+          "identifier": "serverless_stable_mv5gxq_catalog.insurance_trip_wise.agg_location",
+          "column_configs": [
+            {
+              "column_name": "converting_trigger",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "state",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "trip_cnt",
+              "enable_format_assistance": true
+            }
+          ]
+        },
+        {
+          "identifier": "serverless_stable_mv5gxq_catalog.insurance_trip_wise.agg_offer_performance",
+          "column_configs": [
+            {
+              "column_name": "avg_driver_score",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "click_rate",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "conversion_rate",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "offer_trigger",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "offers_clicked",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "offers_converted",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "offers_shown",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "product_name",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "report_date",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "total_premium_converted",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "trip_phase",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            }
+          ]
+        },
+        {
+          "identifier": "serverless_stable_mv5gxq_catalog.insurance_trip_wise.brickwise_device_data",
+          "column_configs": [
+            {
+              "column_name": "acceleration_x",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "acceleration_y",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "acceleration_z",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "altitude",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "device_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "event_severity",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "event_type",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "heading",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "is_night_driving",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "latitude",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "longitude",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "phone_usage",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "speed_mph",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "timestamp",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "trip_distance_miles",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "trip_duration_seconds",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "trip_id",
+              "enable_format_assistance": true
+            }
+          ]
+        },
+        {
+          "identifier": "serverless_stable_mv5gxq_catalog.insurance_trip_wise.dim_drivers",
+          "column_configs": [
+            {
+              "column_name": "current_driving_score",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "device_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "driver_key",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "driver_name",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "embedded_policy_product",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "has_embedded_policy",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "policy_number",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "registration_date",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "risk_tier",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "status",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "total_miles",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "total_trips",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "vehicle_info",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            }
+          ]
+        },
+        {
+          "identifier": "serverless_stable_mv5gxq_catalog.insurance_trip_wise.dim_products",
+          "column_configs": [
+            {
+              "column_name": "base_premium_monthly",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "max_discount_pct",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "product_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "product_key",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "product_name",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "product_type",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            }
+          ]
+        },
+        {
+          "identifier": "serverless_stable_mv5gxq_catalog.insurance_trip_wise.fact_conversions",
+          "column_configs": [
+            {
+              "column_name": "converting_offer_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "converting_trigger",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "days_since_registration",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "device_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "discount_pct",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "driving_score",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "policy_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "premium_monthly",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "product_name",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "signed_up_at",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "signup_date",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "trip_phase_at_conversion",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "trips_before_signup",
+              "enable_format_assistance": true
+            }
+          ]
+        },
+        {
+          "identifier": "serverless_stable_mv5gxq_catalog.insurance_trip_wise.fact_offers",
+          "column_configs": [
+            {
+              "column_name": "device_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "did_sign_up",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "discount_pct",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "driver_score_at_offer",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "driver_score_band",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "offer_date",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "offer_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "offer_trigger",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "offered_at",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "premium_monthly",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "product_name",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "time_to_response_seconds",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "trip_elapsed_pct",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "trip_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "trip_phase",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "was_clicked",
+              "enable_format_assistance": true
+            }
+          ]
+        },
+        {
+          "identifier": "serverless_stable_mv5gxq_catalog.insurance_trip_wise.policies",
+          "column_configs": [
+            {
+              "column_name": "carrier_name",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "coverage_level",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "device_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "discount_pct",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "driving_score_at_signup",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "effective_date",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "effective_timestamp",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "expiration_timestamp",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "is_active",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "offer_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "policy_duration_days",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "policy_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "policy_type",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "premium_amount",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "premium_period",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "product_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "product_name",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "product_type",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "status",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "trip_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "trips_completed_at_signup",
+              "enable_format_assistance": true
+            }
+          ]
+        },
+        {
+          "identifier": "serverless_stable_mv5gxq_catalog.insurance_trip_wise.products",
+          "column_configs": [
+            {
+              "column_name": "base_premium_monthly",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "is_active",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "max_discount_pct",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "product_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "product_name",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "product_type",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "trip_premium",
+              "enable_format_assistance": true
+            }
+          ]
+        },
+        {
+          "identifier": "serverless_stable_mv5gxq_catalog.insurance_trip_wise.trips",
+          "column_configs": [
+            {
+              "column_name": "avg_speed_mph",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "converting_trigger",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "device_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "did_convert",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "distance_miles",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "duration_seconds",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "embedded_purchase_latitude",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "embedded_purchase_longitude",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "end_latitude",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "end_longitude",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "end_timestamp",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "hard_brake_count",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "high_risk_area_pct",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "inclement_weather_pct",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "max_speed_mph",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "night_driving_pct",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "offers_clicked",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "offers_shown",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "rapid_accel_count",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "sharp_turn_count",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "speeding_count",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "start_latitude",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "start_longitude",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "start_timestamp",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "status",
+              "enable_format_assistance": true,
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "trip_date",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "trip_id",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "trip_score",
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "zone_key",
+              "enable_format_assistance": true
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

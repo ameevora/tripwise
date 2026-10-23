@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tripwise - Insurance Agent Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <div class="logo-icon-wrapper">
+                        <i class="bi bi-speedometer2"></i>
+                    </div>
+                    <div class="logo-text">
+                        <span class="brand">Tripwise</span>
+                        <span class="subtitle">Agent Portal</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nav-section">
+                <span class="nav-section-title">MAIN MENU</span>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/' or request.path == '/analytics' %}active{% endif %}" href="/analytics">
+                            <i class="bi bi-graph-up-arrow"></i>
+                            <span>Analytics Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/insights' %}active{% endif %}" href="/insights">
+                            <i class="bi bi-lightning-charge-fill"></i>
+                            <span>Performance Insights</span>
+                            <span class="badge-new">NEW</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/genie' %}active{% endif %}" href="/genie">
+                            <i class="bi bi-stars"></i>
+                            <span>AI Assistant</span>
+                            <span class="badge-new">AI</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/agent' %}active{% endif %}" href="/agent">
+                            <i class="bi bi-envelope-paper"></i>
+                            <span>Agent Actions</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/offer' %}active{% endif %}" href="/offer">
+                            <i class="bi bi-megaphone"></i>
+                            <span>Agent Offer Action</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/registrations' %}active{% endif %}" href="/registrations">
+                            <i class="bi bi-device-hdd"></i>
+                            <span>Device Registrations</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="powered-by">
+                    <span>Powered by</span>
+                    <svg class="databricks-logo" viewBox="0 0 120 20" fill="currentColor">
+                        <text x="0" y="15" font-size="14" font-weight="600">Databricks</text>
+                    </svg>
+                </div>
+                <div class="user-card">
+                    <div class="user-avatar">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name">{{ user }}</span>
+                        <span class="user-role">Insurance Agent</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

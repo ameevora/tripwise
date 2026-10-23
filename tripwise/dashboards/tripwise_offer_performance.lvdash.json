@@ -1,0 +1,4363 @@
+{
+  "dashboard_id": "01f15bdebe6a12d8b153f14e54703b8e",
+  "display_name": "Tripwise_ Offer Performance and Driver Conversion",
+  "warehouse_id": "22ad910fe1aed92d",
+  "serialized_dashboard": {
+    "datasets": [
+      {
+        "name": "90619107",
+        "displayName": "trip_detail",
+        "queryLines": [
+          "select driver_name, current_driving_score, tp.device_id, tp.trip_id, offers_shown,offers_clicked, did_convert, fo.offer_id,\n",
+          "leaving_home_zone_count,rough_road_conditions_count,high_risk_area_pct,sharp_turn_count, inclement_weather_pct, trip_date\n",
+          "from serverless_stable_mv5gxq_catalog.insurance_trip_wise.trips tp\n",
+          "--join main.amee.policies pol on \n",
+          "--tp.device_id = pol.device_id\n",
+          "join serverless_stable_mv5gxq_catalog.insurance_trip_wise.dim_drivers drv\n",
+          "on tp.device_id = drv.device_id\n",
+          "left join serverless_stable_mv5gxq_catalog.insurance_trip_wise.fact_offers fo\n",
+          "on tp.trip_id = fo.trip_id\n",
+          "and tp.device_id = fo.device_id"
+        ],
+        "columns": [
+          {
+            "displayName": "Conversion Rate %",
+            "description": "Conversion rate as percentage (100 if converted, 0 otherwise)",
+            "expression": "CASE WHEN did_convert = TRUE THEN 100.0 ELSE 0.0 END"
+          },
+          {
+            "displayName": "Total Risk Incidents",
+            "description": "Sum of all risk behaviors: home zone exits, rough roads, and sharp turns",
+            "expression": "leaving_home_zone_count + rough_road_conditions_count + sharp_turn_count"
+          },
+          {
+            "displayName": "Risk Level",
+            "description": "Categorizes trips into risk levels based on total risk incidents",
+            "expression": "CASE WHEN (leaving_home_zone_count + rough_road_conditions_count + sharp_turn_count) = 0 THEN 'Low Risk' WHEN (leaving_home_zone_count + rough_road_conditions_count + sharp_turn_count) <= 3 THEN 'Medium Risk' ELSE 'High Risk' END"
+          }
+        ]
+      },
+      {
+        "name": "7b0850ed",
+        "displayName": "offers_details",
+        "queryLines": [
+          "select of.*, drv.driver_name from serverless_stable_mv5gxq_catalog.insurance_trip_wise.fact_offers of\n",
+          "join serverless_stable_mv5gxq_catalog.insurance_trip_wise.dim_drivers drv\n",
+          "on of.device_id = drv.device_id"
+        ],
+        "columns": [
+          {
+            "displayName": "Trip Elapsed Segment",
+            "description": "Buckets trip_elapsed_pct into Early/Mid/Late segments",
+            "expression": "CASE WHEN `trip_elapsed_pct` <= 0.33 THEN 'Early (0-33%)' WHEN `trip_elapsed_pct` <= 0.66 THEN 'Mid (34-66%)' ELSE 'Late (67-100%)' END"
+          },
+          {
+            "displayName": "Click Rate",
+            "description": "Binary click indicator for aggregation",
+            "expression": "CASE WHEN `was_clicked` = true THEN 1 ELSE 0 END"
+          },
+          {
+            "displayName": "Signup Rate",
+            "description": "Binary signup indicator for aggregation",
+            "expression": "CASE WHEN `did_sign_up` = true THEN 1 ELSE 0 END"
+          }
+        ]
+      },
+      {
+        "name": "4a564d2f",
+        "displayName": "Offers_converted",
+        "queryLines": [
+          "select of.*, drv.driver_name from serverless_stable_mv5gxq_catalog.insurance_trip_wise.fact_conversions of\n",
+          "join serverless_stable_mv5gxq_catalog.insurance_trip_wise.dim_drivers drv\n",
+          "on of.device_id = drv.device_id"
+        ]
+      },
+      {
+        "name": "dc02a5f3",
+        "displayName": "offer_performance_analysis_data",
+        "queryLines": [
+          "select * from serverless_stable_mv5gxq_catalog.insurance_trip_wise.agg_offer_performance"
+        ],
+        "columns": [
+          {
+            "displayName": "Revenue per Offer",
+            "description": "Premium revenue generated per offer shown - measures marketing efficiency",
+            "expression": "CASE WHEN offers_shown > 0 THEN CAST(total_premium_converted AS DOUBLE) / offers_shown ELSE 0 END"
+          },
+          {
+            "displayName": "Funnel Drop-off Rate",
+            "description": "Gap between click rate and conversion rate - measures funnel leakage",
+            "expression": "CASE WHEN click_rate > 0 THEN click_rate - conversion_rate ELSE 0 END"
+          }
+        ]
+      },
+      {
+        "name": "36df4a13",
+        "displayName": "Driver Conversion Insights Analysis",
+        "queryLines": [
+          "select * from serverless_stable_mv5gxq_catalog.insurance_trip_wise.agg_driver_conversions"
+        ]
+      },
+      {
+        "name": "76a48e20",
+        "displayName": "Trip Premium Ratio Analysis",
+        "queryLines": [
+          "with amt as (\n",
+          "  select \n",
+          "    case when premium_period = 'annual' then premium_amount end as original_premium_amt,\n",
+          "    case when premium_period = 'trip' then premium_amount end as trip_premium_amt,\n",
+          "    year(effective_date) as effective_year\n",
+          "  from serverless_stable_mv5gxq_catalog.insurance_trip_wise.policies\n",
+          "  where year(effective_date) in ('2026','2025')\n",
+          ")\n",
+          "select \n",
+          "  effective_year,\n",
+          "  (sum(trip_premium_amt)/sum(original_premium_amt))*100 as trip_premium_ratio\n",
+          "from amt\n",
+          "group by effective_year"
+        ]
+      },
+      {
+        "name": "bc09fd87",
+        "displayName": "Policy Insights Overview",
+        "queryLines": [
+          "select * from serverless_stable_mv5gxq_catalog.insurance_trip_wise.policies"
+        ],
+        "columns": [
+          {
+            "displayName": "Is Active Flag",
+            "description": "Binary active indicator for retention rate calculation",
+            "expression": "CASE WHEN is_active = TRUE THEN 1 ELSE 0 END"
+          },
+          {
+            "displayName": "Premium per Day",
+            "description": "Daily premium yield for underwriter pricing analysis",
+            "expression": "CASE WHEN policy_duration_days > 0 THEN premium_amount / policy_duration_days ELSE 0 END"
+          }
+        ]
+      },
+      {
+        "name": "7ebd1996",
+        "displayName": "Driver Performance Insights for Current Trips",
+        "queryLines": [
+          "select pol.*, drv.driver_name from serverless_stable_mv5gxq_catalog.insurance_trip_wise.policies pol \n",
+          "join serverless_stable_mv5gxq_catalog.insurance_trip_wise.dim_drivers drv\n",
+          "on drv.device_id = pol. device_id\n",
+          "where policy_type != 'embedded_trip'\n",
+          "\n",
+          "\n",
+          "\n"
+        ]
+      },
+      {
+        "name": "da66491c",
+        "displayName": "Driver conversion",
+        "queryLines": [
+          "SELECT\n",
+          "    drv.driver_name,\n",
+          "    tp.device_id,\n",
+          "    tp.trip_date,\n",
+          "    -- Offer metrics\n",
+          "    COUNT(*) AS offers_shown,\n",
+          "    SUM(CASE WHEN was_clicked THEN 1 ELSE 0 END) AS offers_clicked,\n",
+          "    SUM(CASE WHEN did_sign_up THEN 1 ELSE 0 END) AS offers_converted,\n",
+          "    \n",
+          "    -- Calculated rates\n",
+          "    ROUND(\n",
+          "        SUM(CASE WHEN was_clicked THEN 1 ELSE 0 END) * 100.0 / \n",
+          "        NULLIF(COUNT(*), 0), \n",
+          "        2\n",
+          "    ) AS click_rate,\n",
+          "    \n",
+          "    ROUND(\n",
+          "        SUM(CASE WHEN did_sign_up THEN 1 ELSE 0 END) * 100.0 / \n",
+          "        NULLIF(COUNT(*), 0), \n",
+          "        2\n",
+          "    ) AS conversion_rate,\n",
+          "    \n",
+          "    -- Driver context\n",
+          "    ROUND(AVG(driver_score_at_offer), 2) AS avg_driver_score,\n",
+          "    \n",
+          "    -- Revenue metrics\n",
+          "    SUM(CASE WHEN did_sign_up THEN premium_monthly ELSE 0 END) AS total_premium_converted\n",
+          "    \n",
+          "FROM serverless_stable_mv5gxq_catalog.insurance_trip_wise.trips tp\n",
+          "join serverless_stable_mv5gxq_catalog.insurance_trip_wise.dim_drivers drv\n",
+          "on tp.device_id = drv.device_id\n",
+          "left join serverless_stable_mv5gxq_catalog.insurance_trip_wise.fact_offers fo\n",
+          "on tp.trip_id = fo.trip_id\n",
+          "and tp.device_id = fo.device_id\n",
+          "group by drv.driver_name,\n",
+          "    tp.device_id,\n",
+          "    tp.trip_date"
+        ]
+      },
+      {
+        "name": "8c0d131d",
+        "displayName": "Drivers by Driving Score Heatmap",
+        "queryLines": [
+          "SELECT \n",
+          "  CASE \n",
+          "    WHEN current_driving_score >= 90 THEN '90-100 (Excellent)'\n",
+          "    WHEN current_driving_score >= 80 THEN '80-89 (Good)'\n",
+          "    WHEN current_driving_score >= 70 THEN '70-79 (Average)'\n",
+          "    WHEN current_driving_score >= 60 THEN '60-69 (Fair)'\n",
+          "    ELSE 'Below 60 (Poor)'\n",
+          "  END as score_range,\n",
+          "  risk_tier,\n",
+          "  COUNT(*) as driver_count\n",
+          "FROM serverless_stable_mv5gxq_catalog.insurance_trip_wise.dim_drivers\n",
+          "WHERE risk_tier IS NOT NULL\n",
+          "GROUP BY score_range, risk_tier\n",
+          "ORDER BY score_range DESC, risk_tier"
+        ],
+        "catalog": "serverless_stable_mv5gxq_catalog",
+        "schema": "insurance_trip_wise"
+      },
+      {
+        "name": "d791e8fa",
+        "displayName": "Driver Score vs Miles Scatter",
+        "queryLines": [
+          "SELECT \n",
+          "  min(driver_name) as driver_name,\n",
+          "  min(current_driving_score) as current_driving_score,\n",
+          "  min(total_miles) as total_miles,\n",
+          "  min(total_trips) as total_trips,\n",
+          "  min(risk_tier) as risk_tier,\n",
+          "  (sum(leaving_home_zone_count)+  sum(rapid_accel_count)+ sum(sharp_turn_count)+ sum(rough_road_conditions_count)) as total_incidents \n",
+          "FROM serverless_stable_mv5gxq_catalog.insurance_trip_wise.dim_drivers d\n",
+          "join   serverless_stable_mv5gxq_catalog.insurance_trip_wise.trips t\n",
+          "on d.device_id = t.device_id\n",
+          "group by d.device_id\n"
+        ],
+        "catalog": "serverless_stable_mv5gxq_catalog",
+        "schema": "insurance_trip_wise"
+      },
+      {
+        "name": "76afac42",
+        "displayName": "Revenue KPIs",
+        "queryLines": [
+          "SELECT \n",
+          "  SUM(total_premium_converted) as total_revenue,\n",
+          "  SUM(CASE WHEN report_date >= DATE_SUB(CURRENT_DATE(), 365) THEN total_premium_converted ELSE 0 END) as recent_revenue,\n",
+          "  SUM(total_premium_converted) / NULLIF(SUM(offers_converted), 0) as avg_premium_per_conversion,\n",
+          "  SUM(offers_converted) as total_conversions\n",
+          "FROM serverless_stable_mv5gxq_catalog.insurance_trip_wise.agg_offer_performance"
+        ],
+        "catalog": "serverless_stable_mv5gxq_catalog",
+        "schema": "insurance_trip_wise"
+      },
+      {
+        "name": "35151092",
+        "displayName": "Conversion Funnel Metrics",
+        "queryLines": [
+          "SELECT \n",
+          "  COUNT(*) as total_offers_shown,\n",
+          "  SUM(CASE WHEN was_clicked THEN 1 ELSE 0 END) as total_offers_clicked,\n",
+          "  SUM(CASE WHEN did_sign_up THEN 1 ELSE 0 END) as total_conversions,\n",
+          "  (SUM(CASE WHEN was_clicked THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0)) as click_through_rate,\n",
+          "  (SUM(CASE WHEN did_sign_up THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0)) as overall_conversion_rate,\n",
+          "  (SELECT AVG(days_to_convert) FROM serverless_stable_mv5gxq_catalog.insurance_trip_wise.agg_driver_conversions) as avg_days_to_convert\n",
+          "FROM serverless_stable_mv5gxq_catalog.insurance_trip_wise.fact_offers"
+        ],
+        "catalog": "serverless_stable_mv5gxq_catalog",
+        "schema": "insurance_trip_wise"
+      },
+      {
+        "name": "32562d9c",
+        "displayName": "Funnel Stages Data",
+        "queryLines": [
+          "SELECT \n",
+          "  'Offers Shown' AS stage, total_offers_shown AS cnt, 1 AS stage_order\n",
+          "FROM (\n",
+          "  SELECT \n",
+          "    COUNT(*) AS total_offers_shown,\n",
+          "    SUM(CASE WHEN was_clicked THEN 1 ELSE 0 END) AS total_offers_clicked,\n",
+          "    SUM(CASE WHEN did_sign_up THEN 1 ELSE 0 END) AS total_conversions,\n",
+          "    (SUM(CASE WHEN was_clicked THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0)) AS click_through_rate,\n",
+          "    (SUM(CASE WHEN did_sign_up THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0)) AS overall_conversion_rate,\n",
+          "    (SELECT AVG(days_to_convert) FROM serverless_stable_mv5gxq_catalog.insurance_trip_wise.agg_driver_conversions) AS avg_days_to_convert\n",
+          "  FROM serverless_stable_mv5gxq_catalog.insurance_trip_wise.fact_offers\n",
+          ")\n",
+          "UNION ALL\n",
+          "SELECT \n",
+          "  'Offers Clicked' AS stage, total_offers_clicked AS cnt, 2 AS stage_order\n",
+          "FROM (\n",
+          "  SELECT \n",
+          "    COUNT(*) AS total_offers_shown,\n",
+          "    SUM(CASE WHEN was_clicked THEN 1 ELSE 0 END) AS total_offers_clicked,\n",
+          "    SUM(CASE WHEN did_sign_up THEN 1 ELSE 0 END) AS total_conversions,\n",
+          "    (SUM(CASE WHEN was_clicked THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0)) AS click_through_rate,\n",
+          "    (SUM(CASE WHEN did_sign_up THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0)) AS overall_conversion_rate,\n",
+          "    (SELECT AVG(days_to_convert) FROM serverless_stable_mv5gxq_catalog.insurance_trip_wise.agg_driver_conversions) AS avg_days_to_convert\n",
+          "  FROM serverless_stable_mv5gxq_catalog.insurance_trip_wise.fact_offers\n",
+          ")\n",
+          "UNION ALL\n",
+          "SELECT \n",
+          "  'Conversions' AS stage, total_conversions AS cnt, 3 AS stage_order\n",
+          "FROM (\n",
+          "  SELECT \n",
+          "    COUNT(*) AS total_offers_shown,\n",
+          "    SUM(CASE WHEN was_clicked THEN 1 ELSE 0 END) AS total_offers_clicked,\n",
+          "    SUM(CASE WHEN did_sign_up THEN 1 ELSE 0 END) AS total_conversions,\n",
+          "    (SUM(CASE WHEN was_clicked THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0)) AS click_through_rate,\n",
+          "    (SUM(CASE WHEN did_sign_up THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0)) AS overall_conversion_rate,\n",
+          "    (SELECT AVG(days_to_convert) FROM serverless_stable_mv5gxq_catalog.insurance_trip_wise.agg_driver_conversions) AS avg_days_to_convert\n",
+          "  FROM serverless_stable_mv5gxq_catalog.insurance_trip_wise.fact_offers\n",
+          ")"
+        ]
+      },
+      {
+        "name": "a800c52c",
+        "displayName": "Driver Details",
+        "queryLines": [
+          "select \n",
+          "driver_name, \n",
+          "--current_driving_score, \n",
+          "--policy_id,\n",
+          "tp.*\n",
+          "--po.product_name, \n",
+          "--product_type,\n",
+          "--policy_type,\n",
+          "--Premium_amount,\n",
+          "--po.discount_pct,\n",
+          "--po.status as policy_status,\n",
+          "from serverless_stable_mv5gxq_catalog.insurance_trip_wise.trips tp\n",
+          "join serverless_stable_mv5gxq_catalog.insurance_trip_wise.dim_drivers drv\n",
+          "on tp.device_id = drv.device_id\n",
+          "--left join serverless_stable_mv5gxq_catalog.insurance_trip_wise.fact_offers fo\n",
+          "--on tp.trip_id = fo.trip_id\n",
+          "--and tp.device_id = fo.device_id\n",
+          "--left join serverless_stable_mv5gxq_catalog.insurance_trip_wise.policies po\n",
+          "--on po.device_id = tp.device_id"
+        ]
+      },
+      {
+        "name": "dbbe0e5a",
+        "displayName": "Insurance Trip Details Summary Dataset",
+        "queryLines": [
+          "select\n",
+          "  *,\n",
+          "  DATE_TRUNC('QUARTER', CAST(trip_date AS TIMESTAMP)) as trip_quarter\n",
+          "from\n",
+          "  serverless_stable_mv5gxq_catalog.insurance_trip_wise.trips"
+        ],
+        "columns": [
+          {
+            "displayName": "Trip Score Band",
+            "description": "Categorizes trip scores into underwriting risk bands",
+            "expression": "CASE WHEN trip_score >= 80 THEN 'Excellent (80-100)' WHEN trip_score >= 60 THEN 'Good (60-79)' WHEN trip_score >= 40 THEN 'Fair (40-59)' ELSE 'Poor (0-39)' END"
+          },
+          {
+            "displayName": "Total Risk Events",
+            "description": "Sum of all risk events per trip",
+            "expression": "leaving_home_zone_count + rapid_accel_count + sharp_turn_count + rough_road_conditions_count"
+          },
+          {
+            "displayName": "Risk Severity",
+            "description": "Risk severity classification per trip based on total events",
+            "expression": "CASE WHEN (leaving_home_zone_count + rapid_accel_count + sharp_turn_count + rough_road_conditions_count) = 0 THEN 'Clean Trip' WHEN (leaving_home_zone_count + rapid_accel_count + sharp_turn_count + rough_road_conditions_count) <= 3 THEN 'Low Risk' WHEN (leaving_home_zone_count + rapid_accel_count + sharp_turn_count + rough_road_conditions_count) <= 8 THEN 'Moderate Risk' ELSE 'High Risk' END"
+          },
+          {
+            "displayName": "Converted Flag",
+            "description": "100 if converted, 0 otherwise - use AVG for conversion rate %",
+            "expression": "CASE WHEN did_convert = TRUE THEN 100.0 ELSE 0.0 END"
+          },
+          {
+            "displayName": "Night Driver",
+            "description": "Flags trips with significant night driving exposure",
+            "expression": "CASE WHEN night_driving_pct >= 30 THEN 'Night Driver (30%+)' ELSE 'Day Driver (<30%)' END"
+          },
+          {
+            "displayName": "Speed Aggression Ratio",
+            "description": "Max-to-avg speed ratio; higher = more erratic driving",
+            "expression": "CASE WHEN avg_speed_mph > 0 THEN max_speed_mph / avg_speed_mph ELSE 0 END"
+          },
+          {
+            "displayName": "Engagement Rate",
+            "description": "Pct of shown offers that were clicked",
+            "expression": "CASE WHEN offers_shown > 0 THEN (offers_clicked * 100.0) / offers_shown ELSE 0 END"
+          },
+          {
+            "displayName": "Environmental Risk Score",
+            "description": "Combined environmental risk exposure (night + area + weather)",
+            "expression": "night_driving_pct + high_risk_area_pct + inclement_weather_pct"
+          },
+          {
+            "displayName": "Trip Length Category",
+            "description": "Categorizes trip distance for analysis",
+            "expression": "CASE WHEN distance_miles < 5 THEN 'Short (<5 mi)' WHEN distance_miles < 15 THEN 'Medium (5-15 mi)' WHEN distance_miles < 30 THEN 'Long (15-30 mi)' ELSE 'Very Long (30+ mi)' END"
+          },
+          {
+            "displayName": "Dominant Risk Type",
+            "description": "The most frequent risk event type per trip",
+            "expression": "CASE WHEN leaving_home_zone_count >= rapid_accel_count AND leaving_home_zone_count >= sharp_turn_count AND leaving_home_zone_count >= rough_road_conditions_count THEN 'Left Home Zone' WHEN rapid_accel_count >= leaving_home_zone_count AND rapid_accel_count >= sharp_turn_count AND rapid_accel_count >= rough_road_conditions_count THEN 'Rapid Acceleration' WHEN sharp_turn_count >= leaving_home_zone_count AND sharp_turn_count >= rapid_accel_count AND sharp_turn_count >= rough_road_conditions_count THEN 'Sharp Turns' ELSE 'Rough Road' END"
+          },
+          {
+            "displayName": "Trip Quarter",
+            "description": "Quarter-level truncation of trip_date for trend analysis",
+            "expression": "DATE_TRUNC(\"QUARTER\", `trip_date`)"
+          },
+          {
+            "displayName": "Trip Month",
+            "description": "Abbreviated month name for seasonality analysis",
+            "expression": "DATE_FORMAT(trip_date, 'MMM')"
+          },
+          {
+            "displayName": "Trip Year",
+            "description": "Year as string for categorical coloring",
+            "expression": "CAST(YEAR(trip_date) AS STRING)"
+          }
+        ]
+      },
+      {
+        "name": "1cf78d2b",
+        "displayName": "telemetry_history",
+        "queryLines": [
+          "SELECT \n",
+          "    *, \n",
+          "    from_unixtime(`timestamp`) AS readable_timestamp,\n",
+          "    to_date(from_unixtime(`timestamp`)) AS readable_date\n",
+          "FROM \n",
+          "    `serverless_stable_mv5gxq_catalog`.`insurance_trip_wise`.`brickwise_device_data_history`"
+        ],
+        "columns": [
+          {
+            "displayName": "Month",
+            "description": "",
+            "expression": "DATE_FORMAT(readable_date, 'MMM')\n\n"
+          },
+          {
+            "displayName": "Year",
+            "description": "Year as string for YoY comparison",
+            "expression": "CAST(YEAR(readable_date) AS STRING)"
+          }
+        ]
+      },
+      {
+        "name": "1a0fcc5a",
+        "displayName": "telemetry_daily",
+        "queryLines": [
+          "SELECT \n",
+          "    *, \n",
+          "    from_unixtime(`timestamp`) AS readable_timestamp,\n",
+          "    to_date(from_unixtime(`timestamp`)) AS readable_date\n",
+          "FROM \n",
+          "    `serverless_stable_mv5gxq_catalog`.`insurance_trip_wise`.`brickwise_device_data`"
+        ],
+        "columns": [
+          {
+            "displayName": "Hour of Day",
+            "description": "Hour extracted from timestamp (0-23) for peak time analysis",
+            "expression": "HOUR(CAST(readable_timestamp AS TIMESTAMP))"
+          }
+        ]
+      },
+      {
+        "name": "d70d2be8",
+        "displayName": "driver_profile",
+        "queryLines": [
+          "select * from\n",
+          "(\n",
+          "select pol.policy_id as pol_id,pol.device_id as dev_id, * from serverless_stable_mv5gxq_catalog.insurance_trip_wise.dim_drivers drv\n",
+          "join serverless_stable_mv5gxq_catalog.insurance_trip_wise.policies pol\n",
+          "on drv.policy_number = pol.policy_id\n",
+          "and drv.device_id = pol.device_id\n",
+          "union all\n",
+          "select pol.policy_id as pol_id,pol.device_id as dev_id,* from serverless_stable_mv5gxq_catalog.insurance_trip_wise.dim_drivers drv\n",
+          "join serverless_stable_mv5gxq_catalog.insurance_trip_wise.policies pol\n",
+          "on drv.device_id = pol.device_id\n",
+          "where policy_type = 'embedded_trip'\n",
+          ")\n",
+          "order by  dev_id,pol_id"
+        ]
+      }
+    ],
+    "pages": [
+      {
+        "name": "59370c3c",
+        "displayName": "Business Overview",
+        "layout": [
+          {
+            "widget": {
+              "name": "annual-revenue-embedded-products",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "7b0850ed",
+                    "fields": [
+                      {
+                        "name": "yearly(offer_date)",
+                        "expression": "DATE_TRUNC(\"YEAR\", `offer_date`)"
+                      },
+                      {
+                        "name": "sum(premium_monthly)",
+                        "expression": "SUM(`premium_monthly`)"
+                      }
+                    ],
+                    "filters": [
+                      {
+                        "expression": "`did_sign_up` IN (TRUE)"
+                      }
+                    ],
+                    "disaggregated": false,
+                    "orders": [
+                      {
+                        "direction": "DESC",
+                        "expression": "DATE_TRUNC(\"YEAR\", `offer_date`)"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "Total Revenue from Embedded Products"
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "sum(premium_monthly)"
+                  },
+                  "target": {
+                    "fieldName": "sum(premium_monthly)",
+                    "change": {
+                      "type": "percent"
+                    },
+                    "period": {
+                      "type": "relative-to-value-period",
+                      "offset": -1
+                    }
+                  },
+                  "period": {
+                    "fieldName": "yearly(offer_date)"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 4,
+              "y": 3,
+              "width": 4,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "increased-revenue-percentage",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "76a48e20",
+                    "fields": [
+                      {
+                        "name": "max(trip_premium_ratio)",
+                        "expression": "MAX(`trip_premium_ratio`)"
+                      },
+                      {
+                        "name": "min(trip_premium_ratio)",
+                        "expression": "MIN(`trip_premium_ratio`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "Embedded Revenue Percentage"
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "min(trip_premium_ratio)"
+                  },
+                  "target": {
+                    "fieldName": "max(trip_premium_ratio)",
+                    "change": {
+                      "type": "percent"
+                    }
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 8,
+              "y": 3,
+              "width": 4,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "93a88d6d",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "bc09fd87",
+                    "fields": [
+                      {
+                        "name": "policy_type",
+                        "expression": "`policy_type`"
+                      },
+                      {
+                        "name": "yearly(effective_date)",
+                        "expression": "DATE_TRUNC(\"YEAR\", `effective_date`)"
+                      },
+                      {
+                        "name": "sum(premium_amount)",
+                        "expression": "SUM(`premium_amount`)"
+                      }
+                    ],
+                    "filters": [
+                      {
+                        "expression": "`policy_type` IN (`policy_type`) OR TRUE"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Additional Revenue Generated by Embedded Product",
+                  "showTitle": true
+                },
+                "widgetType": "bar",
+                "encodings": {
+                  "x": {
+                    "fieldName": "yearly(effective_date)",
+                    "scale": {
+                      "type": "temporal"
+                    }
+                  },
+                  "y": {
+                    "fieldName": "sum(premium_amount)",
+                    "displayName": "Total Premium",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "policy_type",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  },
+                  "label": {
+                    "show": true
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 9,
+              "width": 6,
+              "height": 6
+            }
+          },
+          {
+            "widget": {
+              "name": "annual-revenue-full-term-policies",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "bc09fd87",
+                    "fields": [
+                      {
+                        "name": "yearly(effective_date)",
+                        "expression": "DATE_TRUNC(\"YEAR\", `effective_date`)"
+                      },
+                      {
+                        "name": "sum(premium_amount)",
+                        "expression": "SUM(`premium_amount`)"
+                      }
+                    ],
+                    "filters": [
+                      {
+                        "expression": "`policy_type` IN ('full_term')"
+                      }
+                    ],
+                    "disaggregated": false,
+                    "orders": [
+                      {
+                        "direction": "DESC",
+                        "expression": "DATE_TRUNC(\"YEAR\", `effective_date`)"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "Total Revenue from Full Term Polcies"
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "sum(premium_amount)"
+                  },
+                  "target": {
+                    "fieldName": "sum(premium_amount)",
+                    "period": {
+                      "type": "relative-to-value-period",
+                      "offset": -1
+                    },
+                    "change": {
+                      "type": "percent"
+                    }
+                  },
+                  "period": {
+                    "fieldName": "yearly(effective_date)"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 3,
+              "width": 4,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "main-title",
+              "multilineTextboxSpec": {
+                "lines": [
+                  "<span style=\"font-size:54px;line-height:1.5;color:#00A972\">\ud83d\udcbc Business KPIs</span>"
+                ]
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 2
+            }
+          },
+          {
+            "widget": {
+              "name": "e1c66df6",
+              "multilineTextboxSpec": {
+                "lines": [
+                  "<span style=\"font-size:24px;color:#00A972\">\ud83d\udcb0 </span><span style=\"font-size: 28px;color: #00A972;font-family: Arial;\">Executive Insights: Policy Mix & Performance</span>"
+                ]
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 2,
+              "width": 12,
+              "height": 1
+            }
+          },
+          {
+            "widget": {
+              "name": "total-active-policies",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "76afac42",
+                    "fields": [
+                      {
+                        "name": "sum(avg_premium_per_conversion)",
+                        "expression": "SUM(`avg_premium_per_conversion`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "Avg Premium per Conversion"
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "sum(avg_premium_per_conversion)"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 6,
+              "width": 4,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "active-policies-1",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "bc09fd87",
+                    "fields": [
+                      {
+                        "name": "countdistinct(policy_id)",
+                        "expression": "COUNT(DISTINCT `policy_id`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "Active Policies"
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "countdistinct(policy_id)"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 4,
+              "y": 6,
+              "width": 3,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "26f27716",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "bc09fd87",
+                    "fields": [
+                      {
+                        "name": "product_name",
+                        "expression": "`product_name`"
+                      },
+                      {
+                        "name": "sum(premium_amount)",
+                        "expression": "SUM(`premium_amount`)"
+                      }
+                    ],
+                    "filters": [
+                      {
+                        "expression": "`policy_type` IN ('embedded_trip')"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Revenue Distribution by Embedded Products",
+                  "showTitle": true
+                },
+                "widgetType": "bar",
+                "encodings": {
+                  "x": {
+                    "fieldName": "product_name",
+                    "displayName": "Product",
+                    "scale": {
+                      "type": "categorical",
+                      "sort": {
+                        "by": "y-reversed"
+                      }
+                    }
+                  },
+                  "y": {
+                    "fieldName": "sum(premium_amount)",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 0
+                      },
+                      "abbreviation": "compact"
+                    },
+                    "displayName": "Total Revenue",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "product_name",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  },
+                  "label": {
+                    "show": true
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 6,
+              "y": 9,
+              "width": 6,
+              "height": 6
+            }
+          },
+          {
+            "widget": {
+              "name": "476d2843",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dc02a5f3",
+                    "fields": [
+                      {
+                        "name": "product_name",
+                        "expression": "`product_name`"
+                      },
+                      {
+                        "name": "yearly(report_date)",
+                        "expression": "DATE_TRUNC(\"YEAR\", `report_date`)"
+                      },
+                      {
+                        "name": "sum(offers_converted)",
+                        "expression": "SUM(`offers_converted`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Number of Offers by Embedded Product",
+                  "showTitle": true
+                },
+                "widgetType": "bar",
+                "encodings": {
+                  "x": {
+                    "fieldName": "yearly(report_date)",
+                    "displayName": "Year",
+                    "scale": {
+                      "type": "temporal"
+                    }
+                  },
+                  "y": {
+                    "fieldName": "sum(offers_converted)",
+                    "displayName": "Total Offers Converted",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "product_name",
+                    "scale": {
+                      "type": "categorical",
+                      "mappings": [
+                        {
+                          "value": "Extended Zone Protection",
+                          "color": {
+                            "themeColorType": "visualizationColors",
+                            "position": 2
+                          }
+                        },
+                        {
+                          "value": "High-Risk Zone Shield",
+                          "color": {
+                            "themeColorType": "visualizationColors",
+                            "position": 3
+                          }
+                        },
+                        {
+                          "value": "Roadside On-Demand",
+                          "color": {
+                            "themeColorType": "visualizationColors",
+                            "position": 4
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "label": {
+                    "show": true
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 15,
+              "width": 6,
+              "height": 7
+            }
+          },
+          {
+            "widget": {
+              "name": "retention_rate",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "bc09fd87",
+                    "fields": [
+                      {
+                        "name": "avg(Is Active Flag)",
+                        "expression": "AVG(`Is Active Flag`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "title": "Policy Retention Rate",
+                  "showTitle": true
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "avg(Is Active Flag)",
+                    "format": {
+                      "type": "number-percent",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 1
+                      }
+                    },
+                    "displayName": "Retention Rate %"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 7,
+              "y": 6,
+              "width": 5,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "ce57fb29",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dbbe0e5a",
+                    "fields": [
+                      {
+                        "name": "converting_trigger",
+                        "expression": "`converting_trigger`"
+                      },
+                      {
+                        "name": "embedded_purchase_latitude",
+                        "expression": "`embedded_purchase_latitude`"
+                      },
+                      {
+                        "name": "embedded_purchase_longitude",
+                        "expression": "`embedded_purchase_longitude`"
+                      },
+                      {
+                        "name": "trip_score",
+                        "expression": "`trip_score`"
+                      },
+                      {
+                        "name": "Trip Score Band",
+                        "expression": "`Trip Score Band`"
+                      },
+                      {
+                        "name": "Risk Severity",
+                        "expression": "`Risk Severity`"
+                      }
+                    ],
+                    "filters": [
+                      {
+                        "expression": "`did_convert` IN (TRUE)"
+                      }
+                    ],
+                    "disaggregated": true
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "title": "Where Conversions Happen (Purchase Locations)",
+                  "showTitle": true
+                },
+                "widgetType": "symbol-map",
+                "encodings": {
+                  "coordinates": {
+                    "latitude": {
+                      "fieldName": "embedded_purchase_latitude",
+                      "displayName": "Purchase Latitude"
+                    },
+                    "longitude": {
+                      "fieldName": "embedded_purchase_longitude",
+                      "displayName": "Purchase Longitude"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "converting_trigger",
+                    "scale": {
+                      "type": "categorical",
+                      "mappings": [
+                        {
+                          "value": "inclement_weather",
+                          "color": {
+                            "themeColorType": "visualizationColors",
+                            "position": 2
+                          }
+                        },
+                        {
+                          "value": "rough_road_conditions",
+                          "color": {
+                            "themeColorType": "visualizationColors",
+                            "position": 4
+                          }
+                        },
+                        {
+                          "value": "leaving_home_zone",
+                          "color": {
+                            "themeColorType": "visualizationColors",
+                            "position": 3
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "extra": [
+                    {
+                      "fieldName": "trip_score",
+                      "displayName": "Trip Score"
+                    },
+                    {
+                      "fieldName": "Trip Score Band",
+                      "displayName": "Trip Score Band"
+                    },
+                    {
+                      "fieldName": "converting_trigger",
+                      "displayName": "Converting Trigger"
+                    },
+                    {
+                      "fieldName": "Risk Severity"
+                    }
+                  ]
+                }
+              }
+            },
+            "position": {
+              "x": 6,
+              "y": 15,
+              "width": 6,
+              "height": 7
+            }
+          },
+          {
+            "widget": {
+              "name": "trip-seasonality-effects",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dbbe0e5a",
+                    "fields": [
+                      {
+                        "name": "Trip Year",
+                        "expression": "`Trip Year`"
+                      },
+                      {
+                        "name": "Trip Month",
+                        "expression": "`Trip Month`"
+                      },
+                      {
+                        "name": "count(trip_id)",
+                        "expression": "COUNT(`trip_id`)"
+                      }
+                    ],
+                    "filters": [
+                      {
+                        "expression": "IN_RANGE(`trip_date`, DATE'2021-01-01T00:00:00.000', DATE'2025-12-31T23:59:59.999')"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Trip Seasonality: Monthly Volume by Year",
+                  "showTitle": true
+                },
+                "widgetType": "bar",
+                "encodings": {
+                  "x": {
+                    "fieldName": "Trip Month",
+                    "displayName": "Month",
+                    "scale": {
+                      "type": "categorical",
+                      "sort": {
+                        "by": "custom-order",
+                        "orderedValues": [
+                          "Jan",
+                          "Feb",
+                          "Mar",
+                          "Apr",
+                          "May",
+                          "Jun",
+                          "Jul",
+                          "Aug",
+                          "Sep",
+                          "Oct",
+                          "Nov",
+                          "Dec"
+                        ]
+                      }
+                    }
+                  },
+                  "y": {
+                    "fieldName": "count(trip_id)",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "compact"
+                    },
+                    "displayName": "Trip Count",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "Trip Year",
+                    "legend": {
+                      "position": "top"
+                    },
+                    "displayName": "Year",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 23,
+              "width": 12,
+              "height": 6
+            }
+          },
+          {
+            "widget": {
+              "name": "aa5c1ea7",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "1a0fcc5a",
+                    "fields": [
+                      {
+                        "name": "event_type",
+                        "expression": "`event_type`"
+                      },
+                      {
+                        "name": "Hour of Day",
+                        "expression": "`Hour of Day`"
+                      },
+                      {
+                        "name": "count(trip_id)",
+                        "expression": "COUNT(`trip_id`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Peak Trip Hours: Telemtry Events by Time of Day",
+                  "showTitle": true
+                },
+                "widgetType": "bar",
+                "encodings": {
+                  "x": {
+                    "fieldName": "Hour of Day",
+                    "displayName": "Hour of Day",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "y": {
+                    "fieldName": "count(trip_id)",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "compact"
+                    },
+                    "displayName": "Event Count",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "event_type",
+                    "legend": {
+                      "position": "top"
+                    },
+                    "displayName": "Event Type",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  },
+                  "label": {
+                    "show": false
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 29,
+              "width": 12,
+              "height": 6
+            }
+          },
+          {
+            "widget": {
+              "name": "peak-driving-hours-telemetry-events-current-month",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "1cf78d2b",
+                    "fields": [
+                      {
+                        "name": "Year",
+                        "expression": "`Year`"
+                      },
+                      {
+                        "name": "Month",
+                        "expression": "`Month`"
+                      },
+                      {
+                        "name": "countdistinct(telemetry_id)",
+                        "expression": "COUNT(DISTINCT `telemetry_id`)"
+                      }
+                    ],
+                    "filters": [
+                      {
+                        "expression": "IN_RANGE(`readable_date`, DATE'2025-01-01T00:00:00.000', DATE'2026-12-31T23:59:59.999')"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Telemetry Events: 2025 vs 2026 Year-over-Year",
+                  "showTitle": true
+                },
+                "widgetType": "bar",
+                "encodings": {
+                  "x": {
+                    "fieldName": "Month",
+                    "displayName": "Month",
+                    "scale": {
+                      "type": "categorical",
+                      "sort": {
+                        "by": "custom-order",
+                        "orderedValues": [
+                          "Jan",
+                          "Feb",
+                          "Mar",
+                          "Apr",
+                          "May",
+                          "Jun",
+                          "Jul",
+                          "Aug",
+                          "Sep",
+                          "Oct",
+                          "Nov",
+                          "Dec"
+                        ]
+                      }
+                    }
+                  },
+                  "y": {
+                    "fieldName": "countdistinct(telemetry_id)",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "compact"
+                    },
+                    "displayName": "Event Count",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "Year",
+                    "legend": {
+                      "position": "top"
+                    },
+                    "displayName": "Year",
+                    "scale": {
+                      "type": "categorical",
+                      "mappings": [
+                        {
+                          "value": "2025",
+                          "color": {
+                            "themeColorType": "visualizationColors",
+                            "position": 2
+                          }
+                        },
+                        {
+                          "value": "2026",
+                          "color": {
+                            "themeColorType": "visualizationColors",
+                            "position": 3
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "label": {
+                    "show": true
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 35,
+              "width": 12,
+              "height": 6
+            }
+          },
+          {
+            "widget": {
+              "name": "ef706670",
+              "multilineTextboxSpec": {
+                "lines": [
+                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">\ud83d\udd50 Trip Seasonality & Peak Driving Hours</span>"
+                ]
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 22,
+              "width": 12,
+              "height": 1
+            }
+          }
+        ],
+        "pageType": "PAGE_TYPE_CANVAS",
+        "layoutVersion": "GRID_V1"
+      },
+      {
+        "name": "1e0bf9c3",
+        "displayName": "Offer Performance",
+        "layout": [
+          {
+            "widget": {
+              "name": "b800a16f",
+              "multilineTextboxSpec": {
+                "lines": [
+                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">\ud83d\udcc8 Conversion Drivers: Trigger & Timing Analysis</span>"
+                ]
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 24,
+              "width": 12,
+              "height": 1
+            }
+          },
+          {
+            "widget": {
+              "name": "78991133",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dc02a5f3",
+                    "fields": [
+                      {
+                        "name": "sum(offers_shown)",
+                        "expression": "SUM(`offers_shown`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "title": "Total Offers Shown",
+                  "showTitle": true
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "sum(offers_shown)",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 0
+                      },
+                      "abbreviation": "compact"
+                    },
+                    "displayName": "Total Offers"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 3,
+              "width": 4,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "67e9ff0a",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dc02a5f3",
+                    "fields": [
+                      {
+                        "name": "sum(offers_converted)",
+                        "expression": "SUM(`offers_converted`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "title": "Total Conversions",
+                  "showTitle": true
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "sum(offers_converted)",
+                    "displayName": "Total Conversions"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 8,
+              "y": 3,
+              "width": 4,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "5de19830",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "35151092",
+                    "fields": [
+                      {
+                        "name": "overall_conversion_rate",
+                        "expression": "`overall_conversion_rate`"
+                      }
+                    ],
+                    "disaggregated": true
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "title": "Overall Conversion Rate",
+                  "showTitle": true
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "overall_conversion_rate",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 1
+                      }
+                    },
+                    "displayName": "Conversion Rate"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 6,
+              "width": 4,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "7f53abe1",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "36df4a13",
+                    "fields": [
+                      {
+                        "name": "trip_phase_at_conversion",
+                        "expression": "`trip_phase_at_conversion`"
+                      },
+                      {
+                        "name": "converting_trigger",
+                        "expression": "`converting_trigger`"
+                      },
+                      {
+                        "name": "count(*)",
+                        "expression": "COUNT(`*`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 1,
+                "frame": {
+                  "title": "What Offers Convert: Trigger & Trip Phase",
+                  "showTitle": true
+                },
+                "widgetType": "sankey",
+                "encodings": {
+                  "value": {
+                    "fieldName": "count(*)"
+                  },
+                  "stages": [
+                    {
+                      "fieldName": "trip_phase_at_conversion"
+                    },
+                    {
+                      "fieldName": "converting_trigger"
+                    }
+                  ]
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 25,
+              "width": 6,
+              "height": 5
+            }
+          },
+          {
+            "widget": {
+              "name": "3d425930",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "36df4a13",
+                    "fields": [
+                      {
+                        "name": "converting_trigger",
+                        "expression": "`converting_trigger`"
+                      },
+                      {
+                        "name": "offers_seen_before_conversion",
+                        "expression": "`offers_seen_before_conversion`"
+                      },
+                      {
+                        "name": "count(*)",
+                        "expression": "COUNT(`*`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Offer Exposure Before Conversion",
+                  "showTitle": true
+                },
+                "widgetType": "histogram",
+                "encodings": {
+                  "x": {
+                    "fieldName": "offers_seen_before_conversion",
+                    "displayName": "Offers Seen Before Conversion",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "y": {
+                    "fieldName": "count(*)",
+                    "displayName": "Drivers Converted",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "converting_trigger",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 9,
+              "width": 6,
+              "height": 7
+            }
+          },
+          {
+            "widget": {
+              "name": "18f32263",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dc02a5f3",
+                    "fields": [
+                      {
+                        "name": "sum(offers_converted)",
+                        "expression": "SUM(`offers_converted`)"
+                      },
+                      {
+                        "name": "offer_trigger",
+                        "expression": "`offer_trigger`"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Sign Up Rate by Offer Trigger",
+                  "showTitle": true
+                },
+                "widgetType": "pie",
+                "encodings": {
+                  "angle": {
+                    "fieldName": "sum(offers_converted)",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "offer_trigger",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  },
+                  "label": {
+                    "show": true
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 6,
+              "y": 30,
+              "width": 6,
+              "height": 6
+            }
+          },
+          {
+            "widget": {
+              "name": "69fa2201",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dc02a5f3",
+                    "fields": [
+                      {
+                        "name": "sum(offers_clicked)",
+                        "expression": "SUM(`offers_clicked`)"
+                      },
+                      {
+                        "name": "offer_trigger",
+                        "expression": "`offer_trigger`"
+                      },
+                      {
+                        "name": "count(*)",
+                        "expression": "COUNT(`*`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Click Rate by Offer Trigger",
+                  "showTitle": true
+                },
+                "widgetType": "pie",
+                "encodings": {
+                  "angle": {
+                    "fieldName": "sum(offers_clicked)",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "offer_trigger",
+                    "displayName": "Offer Trigger",
+                    "scale": {
+                      "type": "categorical",
+                      "mappings": [
+                        {
+                          "value": "speeding",
+                          "color": "#007CA9"
+                        },
+                        {
+                          "value": "hard_brake",
+                          "color": {
+                            "themeColorType": "visualizationColors",
+                            "position": 6
+                          }
+                        },
+                        {
+                          "value": "bad_neighborhood",
+                          "color": {
+                            "themeColorType": "visualizationColors",
+                            "position": 8
+                          }
+                        },
+                        {
+                          "value": "inclement_weather",
+                          "color": {
+                            "themeColorType": "visualizationColors",
+                            "position": 10
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "label": {
+                    "show": true
+                  },
+                  "extra": [
+                    {
+                      "fieldName": "count(*)"
+                    }
+                  ]
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 30,
+              "width": 6,
+              "height": 6
+            }
+          },
+          {
+            "widget": {
+              "name": "556a51be",
+              "multilineTextboxSpec": {
+                "lines": [
+                  "<span style=\"font-size:54px;line-height:1.5;color:#00A972\">\ud83d\udcca Offer Performance</span>"
+                ]
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 2
+            }
+          },
+          {
+            "widget": {
+              "name": "total-offers-clicked",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dc02a5f3",
+                    "fields": [
+                      {
+                        "name": "sum(offers_clicked)",
+                        "expression": "SUM(`offers_clicked`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "Total Offers Clicked"
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "sum(offers_clicked)"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 4,
+              "y": 3,
+              "width": 4,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "click-through-rate",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "35151092",
+                    "fields": [
+                      {
+                        "name": "sum(click_through_rate)",
+                        "expression": "SUM(`click_through_rate`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "Click-Through Rate"
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "sum(click_through_rate)"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 4,
+              "y": 6,
+              "width": 4,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "avg-days-to-convert",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "7b0850ed",
+                    "fields": [
+                      {
+                        "name": "max(time_to_response_seconds)",
+                        "expression": "MAX(`time_to_response_seconds`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "Max Offer Response time(in seconds)"
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "max(time_to_response_seconds)"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 8,
+              "y": 6,
+              "width": 4,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "b5021a29",
+              "multilineTextboxSpec": {
+                "lines": [
+                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">\ud83d\udd2c Underwriter Metrics: Funnel & Conversion Timing</span>"
+                ]
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 1
+            }
+          },
+          {
+            "widget": {
+              "name": "c2c8acf3",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "32562d9c",
+                    "fields": [
+                      {
+                        "name": "stage",
+                        "expression": "`stage`"
+                      },
+                      {
+                        "name": "sum(cnt)",
+                        "expression": "SUM(`cnt`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Conversion Funnel",
+                  "showTitle": true
+                },
+                "widgetType": "funnel",
+                "encodings": {
+                  "x": {
+                    "fieldName": "sum(cnt)",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "y": {
+                    "fieldName": "stage",
+                    "displayName": "Stage",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "stage",
+                    "legend": {
+                      "position": "right"
+                    },
+                    "displayName": "Stage",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  },
+                  "label": {
+                    "show": true
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 17,
+              "width": 6,
+              "height": 7
+            }
+          },
+          {
+            "widget": {
+              "name": "exec_metrics_header",
+              "multilineTextboxSpec": {
+                "lines": [
+                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">\ud83c\udfaf Executive Metrics: Revenue Efficiency & Funnel Analysis</span>"
+                ]
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 2,
+              "width": 12,
+              "height": 1
+            }
+          },
+          {
+            "widget": {
+              "name": "funnel_dropoff",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dc02a5f3",
+                    "fields": [
+                      {
+                        "name": "product_name",
+                        "expression": "`product_name`"
+                      },
+                      {
+                        "name": "avg(click_rate)",
+                        "expression": "AVG(`click_rate`)"
+                      },
+                      {
+                        "name": "avg(conversion_rate)",
+                        "expression": "AVG(`conversion_rate`)"
+                      },
+                      {
+                        "name": "avg(Funnel Drop-off Rate)",
+                        "expression": "AVG(`Funnel Drop-off Rate`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 1,
+                "frame": {
+                  "title": "Click-to-Conversion Drop-off by Product",
+                  "showTitle": true
+                },
+                "widgetType": "combo",
+                "encodings": {
+                  "x": {
+                    "fieldName": "product_name",
+                    "displayName": "Product",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  },
+                  "y": {
+                    "primary": {
+                      "fields": [
+                        {
+                          "fieldName": "avg(click_rate)",
+                          "displayName": "Avg Click Rate %"
+                        },
+                        {
+                          "fieldName": "avg(conversion_rate)",
+                          "displayName": "Avg Conversion Rate %"
+                        }
+                      ],
+                      "scale": {
+                        "type": "quantitative"
+                      }
+                    },
+                    "secondary": {
+                      "fields": [
+                        {
+                          "fieldName": "avg(Funnel Drop-off Rate)",
+                          "displayName": "Avg Drop-off %"
+                        }
+                      ],
+                      "scale": {
+                        "type": "quantitative"
+                      }
+                    }
+                  },
+                  "label": {
+                    "show": true
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 6,
+              "y": 9,
+              "width": 6,
+              "height": 7
+            }
+          },
+          {
+            "widget": {
+              "name": "conversion_by_trip_elapsed",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "7b0850ed",
+                    "fields": [
+                      {
+                        "name": "Trip Elapsed Segment",
+                        "expression": "`Trip Elapsed Segment`"
+                      },
+                      {
+                        "name": "avg(Signup Rate)",
+                        "expression": "AVG(`Signup Rate`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Signup Rate by Trip Elapsed Segment",
+                  "showTitle": true
+                },
+                "widgetType": "bar",
+                "encodings": {
+                  "x": {
+                    "fieldName": "Trip Elapsed Segment",
+                    "displayName": "Trip Elapsed Segment",
+                    "scale": {
+                      "type": "categorical",
+                      "sort": {
+                        "by": "custom-order",
+                        "orderedValues": [
+                          "Early (0-33%)",
+                          "Mid (34-66%)",
+                          "Late (67-100%)"
+                        ]
+                      }
+                    }
+                  },
+                  "y": {
+                    "fieldName": "avg(Signup Rate)",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 2
+                      },
+                      "abbreviation": "none"
+                    },
+                    "displayName": "Signup Rate %",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "Trip Elapsed Segment",
+                    "displayName": "Trip Elapsed Segment",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  },
+                  "label": {
+                    "show": true
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 6,
+              "y": 17,
+              "width": 6,
+              "height": 7
+            }
+          },
+          {
+            "widget": {
+              "name": "days_to_convert_hist",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "4a564d2f",
+                    "fields": [
+                      {
+                        "name": "product_name",
+                        "expression": "`product_name`"
+                      },
+                      {
+                        "name": "monthly(signup_date)",
+                        "expression": "DATE_TRUNC(\"MONTH\", `signup_date`)"
+                      },
+                      {
+                        "name": "count(*)",
+                        "expression": "COUNT(`*`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Conversions Over Time by Product",
+                  "showTitle": true
+                },
+                "widgetType": "line",
+                "encodings": {
+                  "x": {
+                    "fieldName": "monthly(signup_date)",
+                    "displayName": "Signup Month",
+                    "scale": {
+                      "type": "temporal"
+                    }
+                  },
+                  "y": {
+                    "fieldName": "count(*)",
+                    "displayName": "Conversions",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "product_name",
+                    "displayName": "Product",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 36,
+              "width": 6,
+              "height": 7
+            }
+          },
+          {
+            "widget": {
+              "name": "trips_before_signup",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "4a564d2f",
+                    "fields": [
+                      {
+                        "name": "product_name",
+                        "expression": "`product_name`"
+                      },
+                      {
+                        "name": "converting_trigger",
+                        "expression": "`converting_trigger`"
+                      },
+                      {
+                        "name": "avg(trips_before_signup)",
+                        "expression": "AVG(`trips_before_signup`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Trips Before Signup by Trigger",
+                  "showTitle": true
+                },
+                "widgetType": "bar",
+                "encodings": {
+                  "x": {
+                    "fieldName": "converting_trigger",
+                    "displayName": "Converting Trigger",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  },
+                  "y": {
+                    "fieldName": "avg(trips_before_signup)",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 1
+                      },
+                      "abbreviation": "none"
+                    },
+                    "displayName": "Avg Trips Before Signup",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "product_name",
+                    "displayName": "Product",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  },
+                  "label": {
+                    "show": true
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 6,
+              "y": 36,
+              "width": 6,
+              "height": 7
+            }
+          },
+          {
+            "widget": {
+              "name": "days_to_convert_distribution",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "36df4a13",
+                    "fields": [
+                      {
+                        "name": "converting_trigger",
+                        "expression": "`converting_trigger`"
+                      },
+                      {
+                        "name": "days_to_convert",
+                        "expression": "`days_to_convert`"
+                      },
+                      {
+                        "name": "count(*)",
+                        "expression": "COUNT(`*`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Days to Convert Distribution by Driver",
+                  "showTitle": true
+                },
+                "widgetType": "histogram",
+                "encodings": {
+                  "x": {
+                    "fieldName": "days_to_convert",
+                    "displayName": "Days to Convert",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "y": {
+                    "fieldName": "count(*)",
+                    "displayName": "Driver Count",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "converting_trigger",
+                    "legend": {
+                      "position": "top"
+                    },
+                    "displayName": "Converting Trigger",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 43,
+              "width": 6,
+              "height": 6
+            }
+          }
+        ],
+        "pageType": "PAGE_TYPE_CANVAS",
+        "layoutVersion": "GRID_V1"
+      },
+      {
+        "name": "trip_score_insights",
+        "displayName": "Driver Profile and Trip Score Insights",
+        "layout": [
+          {
+            "widget": {
+              "name": "page_title",
+              "multilineTextboxSpec": {
+                "lines": [
+                  "<span style=\"font-size:54px;line-height:1.5;color:#00A972\">\ud83c\udfaf Trip Score Insights</span>"
+                ]
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 2
+            }
+          },
+          {
+            "widget": {
+              "name": "avg_trip_score",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dbbe0e5a",
+                    "fields": [
+                      {
+                        "name": "avg(trip_score)",
+                        "expression": "AVG(`trip_score`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "title": "Avg Trip Score",
+                  "showTitle": true
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "avg(trip_score)",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 1
+                      },
+                      "abbreviation": "none"
+                    },
+                    "displayName": "Avg Trip Score"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 2,
+              "width": 3,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "total_trips",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dbbe0e5a",
+                    "fields": [
+                      {
+                        "name": "count(*)",
+                        "expression": "COUNT(`*`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "title": "Total Trips Analyzed",
+                  "showTitle": true
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "count(*)",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "compact"
+                    },
+                    "displayName": "Total Trips"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 3,
+              "y": 2,
+              "width": 3,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "high_risk_trips",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dbbe0e5a",
+                    "fields": [
+                      {
+                        "name": "count(*)",
+                        "expression": "COUNT(`*`)"
+                      }
+                    ],
+                    "filters": [
+                      {
+                        "expression": "`Risk Severity` IN ('High Risk')"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "title": "High Risk Trips",
+                  "showTitle": true
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "count(*)",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 0
+                      }
+                    },
+                    "displayName": "High Risk Trips"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 6,
+              "y": 2,
+              "width": 3,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "avg_risk_events",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dbbe0e5a",
+                    "fields": [
+                      {
+                        "name": "avg(Total Risk Events)",
+                        "expression": "AVG(`Total Risk Events`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "title": "Avg Risk Events per Trip",
+                  "showTitle": true
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "avg(Total Risk Events)",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 1
+                      },
+                      "abbreviation": "none"
+                    },
+                    "displayName": "Avg Risk Events"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 9,
+              "y": 2,
+              "width": 3,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "claims_header",
+              "multilineTextboxSpec": {
+                "lines": [
+                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">\ud83d\uddfa\ufe0f Claims View: Risk Hotspots & Score vs. Incidents</span>"
+                ]
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 5,
+              "width": 12,
+              "height": 1
+            }
+          },
+          {
+            "widget": {
+              "name": "score_vs_incidents",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dbbe0e5a",
+                    "fields": [
+                      {
+                        "name": "Risk Severity",
+                        "expression": "`Risk Severity`"
+                      },
+                      {
+                        "name": "trip_score",
+                        "expression": "`trip_score`"
+                      },
+                      {
+                        "name": "Total Risk Events",
+                        "expression": "`Total Risk Events`"
+                      }
+                    ],
+                    "disaggregated": true
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Trip Score vs. Total Risk Events",
+                  "showTitle": true
+                },
+                "widgetType": "scatter",
+                "encodings": {
+                  "x": {
+                    "fieldName": "trip_score",
+                    "displayName": "Trip Score",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "y": {
+                    "fieldName": "Total Risk Events",
+                    "displayName": "Total Risk Events",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "Risk Severity",
+                    "displayName": "Risk Severity",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 6,
+              "y": 6,
+              "width": 6,
+              "height": 7
+            }
+          },
+          {
+            "widget": {
+              "name": "low_score_map",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dbbe0e5a",
+                    "fields": [
+                      {
+                        "name": "trip_score",
+                        "expression": "`trip_score`"
+                      },
+                      {
+                        "name": "start_latitude",
+                        "expression": "`start_latitude`"
+                      },
+                      {
+                        "name": "start_longitude",
+                        "expression": "`start_longitude`"
+                      },
+                      {
+                        "name": "trip_id",
+                        "expression": "`trip_id`"
+                      },
+                      {
+                        "name": "Risk Severity",
+                        "expression": "`Risk Severity`"
+                      },
+                      {
+                        "name": "Total Risk Events",
+                        "expression": "`Total Risk Events`"
+                      }
+                    ],
+                    "filters": [
+                      {
+                        "expression": "`Trip Score Band` IN ('Poor (0-39)')"
+                      }
+                    ],
+                    "disaggregated": true
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "title": "Low-Score Trip Hotspots (Score < 40)",
+                  "showTitle": true
+                },
+                "widgetType": "symbol-map",
+                "encodings": {
+                  "coordinates": {
+                    "latitude": {
+                      "fieldName": "start_latitude",
+                      "displayName": "Latitude"
+                    },
+                    "longitude": {
+                      "fieldName": "start_longitude",
+                      "displayName": "Longitude"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "trip_score",
+                    "displayName": "Trip Score",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "size": {
+                    "fieldName": "Total Risk Events",
+                    "scale": {
+                      "type": "quantitative"
+                    },
+                    "displayName": "Risk Events"
+                  },
+                  "extra": [
+                    {
+                      "fieldName": "trip_id",
+                      "displayName": "Trip ID"
+                    },
+                    {
+                      "fieldName": "trip_score",
+                      "displayName": "Trip Score"
+                    },
+                    {
+                      "fieldName": "Risk Severity",
+                      "displayName": "Risk Severity"
+                    }
+                  ]
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 6,
+              "width": 6,
+              "height": 7
+            }
+          },
+          {
+            "widget": {
+              "name": "exec_header_2",
+              "multilineTextboxSpec": {
+                "lines": [
+                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">\ud83c\udfaf Executive View: Conversion & Risk Profile Analysis</span>"
+                ]
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 20,
+              "width": 12,
+              "height": 1
+            }
+          },
+          {
+            "widget": {
+              "name": "conversion_pivot",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dbbe0e5a",
+                    "fields": [
+                      {
+                        "name": "Trip Score Band",
+                        "expression": "`Trip Score Band`"
+                      },
+                      {
+                        "name": "Risk Severity",
+                        "expression": "`Risk Severity`"
+                      },
+                      {
+                        "name": "avg(Converted Flag)",
+                        "expression": "AVG(`Converted Flag`)"
+                      },
+                      {
+                        "name": "count(*)",
+                        "expression": "COUNT(`*`)"
+                      }
+                    ],
+                    "cubeGroupingSets": {
+                      "sets": [
+                        {
+                          "fieldNames": [
+                            "Trip Score Band"
+                          ]
+                        },
+                        {
+                          "fieldNames": [
+                            "Risk Severity"
+                          ]
+                        }
+                      ]
+                    },
+                    "disaggregated": false,
+                    "orders": [
+                      {
+                        "direction": "ASC",
+                        "expression": "`Trip Score Band`"
+                      },
+                      {
+                        "direction": "ASC",
+                        "expression": "`Risk Severity`"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Conversion Rate: Score Band \u00d7 Risk Severity",
+                  "showTitle": true
+                },
+                "widgetType": "pivot",
+                "encodings": {
+                  "rows": [
+                    {
+                      "fieldName": "Trip Score Band",
+                      "displayTotal": true,
+                      "displayName": "Trip Score Band"
+                    }
+                  ],
+                  "columns": [
+                    {
+                      "fieldName": "Risk Severity",
+                      "displayTotal": true,
+                      "displayName": "Risk Severity"
+                    }
+                  ],
+                  "cell": {
+                    "type": "multi-cell",
+                    "fields": [
+                      {
+                        "fieldName": "avg(Converted Flag)",
+                        "cellType": "text",
+                        "displayName": "Conversion Rate %",
+                        "style": {
+                          "type": "color-scale",
+                          "backgroundColor": {
+                            "scale": {
+                              "type": "quantitative",
+                              "colorRamp": {
+                                "mode": "scheme",
+                                "scheme": "greens"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "fieldName": "count(*)",
+                        "cellType": "text",
+                        "displayName": "Trip Count"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 21,
+              "width": 12,
+              "height": 7
+            }
+          },
+          {
+            "widget": {
+              "name": "ee085879",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "8c0d131d",
+                    "fields": [
+                      {
+                        "name": "driver_count",
+                        "expression": "`driver_count`"
+                      },
+                      {
+                        "name": "score_range",
+                        "expression": "`score_range`"
+                      }
+                    ],
+                    "disaggregated": true
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Driving Score HeatMap",
+                  "showTitle": true
+                },
+                "widgetType": "heatmap",
+                "encodings": {
+                  "x": {
+                    "fieldName": "score_range",
+                    "displayName": "Score Range",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "driver_count",
+                    "displayName": "Driver Count",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "label": {
+                    "show": true
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 29,
+              "width": 12,
+              "height": 7
+            }
+          },
+          {
+            "widget": {
+              "name": "2b73fca9",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "d791e8fa",
+                    "fields": [
+                      {
+                        "name": "risk_tier",
+                        "expression": "`risk_tier`"
+                      },
+                      {
+                        "name": "total_miles",
+                        "expression": "`total_miles`"
+                      },
+                      {
+                        "name": "current_driving_score",
+                        "expression": "`current_driving_score`"
+                      }
+                    ],
+                    "disaggregated": true
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Driver Distribution by Risk Tier",
+                  "showTitle": true
+                },
+                "widgetType": "scatter",
+                "encodings": {
+                  "x": {
+                    "fieldName": "total_miles",
+                    "displayName": "Total Miles",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "y": {
+                    "fieldName": "current_driving_score",
+                    "displayName": "Driving Score",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "risk_tier",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 36,
+              "width": 12,
+              "height": 6
+            }
+          },
+          {
+            "widget": {
+              "name": "b6a5b01e",
+              "multilineTextboxSpec": {
+                "lines": [
+                  "<span style=\"font-family:Arial;font-size:36px;line-height:1.5;color:#00A972\">Driver Details</span>"
+                ]
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 42,
+              "width": 12,
+              "height": 2
+            }
+          },
+          {
+            "widget": {
+              "name": "ebd74e27",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "a800c52c",
+                    "fields": [
+                      {
+                        "name": "driver_name",
+                        "expression": "`driver_name`"
+                      },
+                      {
+                        "name": "device_id",
+                        "expression": "`device_id`"
+                      },
+                      {
+                        "name": "trip_id",
+                        "expression": "`trip_id`"
+                      },
+                      {
+                        "name": "trip_date",
+                        "expression": "`trip_date`"
+                      },
+                      {
+                        "name": "start_timestamp",
+                        "expression": "`start_timestamp`"
+                      },
+                      {
+                        "name": "end_timestamp",
+                        "expression": "`end_timestamp`"
+                      },
+                      {
+                        "name": "duration_seconds",
+                        "expression": "`duration_seconds`"
+                      },
+                      {
+                        "name": "distance_miles",
+                        "expression": "`distance_miles`"
+                      },
+                      {
+                        "name": "avg_speed_mph",
+                        "expression": "`avg_speed_mph`"
+                      },
+                      {
+                        "name": "avg_score",
+                        "expression": "`avg_score`"
+                      },
+                      {
+                        "name": "sharp_turn_count",
+                        "expression": "`sharp_turn_count`"
+                      },
+                      {
+                        "name": "rapid_accel_count",
+                        "expression": "`rapid_accel_count`"
+                      },
+                      {
+                        "name": "max_speed_mph",
+                        "expression": "`max_speed_mph`"
+                      },
+                      {
+                        "name": "night_driving_pct",
+                        "expression": "`night_driving_pct`"
+                      },
+                      {
+                        "name": "leaving_home_zone_count",
+                        "expression": "`leaving_home_zone_count`"
+                      },
+                      {
+                        "name": "rough_road_conditions_count",
+                        "expression": "`rough_road_conditions_count`"
+                      },
+                      {
+                        "name": "high_risk_area_pct",
+                        "expression": "`high_risk_area_pct`"
+                      },
+                      {
+                        "name": "inclement_weather_pct",
+                        "expression": "`inclement_weather_pct`"
+                      },
+                      {
+                        "name": "status",
+                        "expression": "`status`"
+                      },
+                      {
+                        "name": "trip_score",
+                        "expression": "`trip_score`"
+                      },
+                      {
+                        "name": "offers_clicked",
+                        "expression": "`offers_clicked`"
+                      },
+                      {
+                        "name": "offers_shown",
+                        "expression": "`offers_shown`"
+                      },
+                      {
+                        "name": "did_convert",
+                        "expression": "`did_convert`"
+                      },
+                      {
+                        "name": "converting_trigger",
+                        "expression": "`converting_trigger`"
+                      }
+                    ],
+                    "disaggregated": true
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "title": "Risk Behavior Breakdown by Driver",
+                  "showTitle": true
+                },
+                "widgetType": "table",
+                "encodings": {
+                  "columns": [
+                    {
+                      "fieldName": "driver_name",
+                      "displayName": "Driver"
+                    },
+                    {
+                      "fieldName": "device_id"
+                    },
+                    {
+                      "fieldName": "trip_id"
+                    },
+                    {
+                      "fieldName": "trip_date"
+                    },
+                    {
+                      "fieldName": "start_timestamp"
+                    },
+                    {
+                      "fieldName": "end_timestamp"
+                    },
+                    {
+                      "fieldName": "duration_seconds"
+                    },
+                    {
+                      "fieldName": "distance_miles"
+                    },
+                    {
+                      "fieldName": "avg_speed_mph"
+                    },
+                    {
+                      "fieldName": "avg_score"
+                    },
+                    {
+                      "fieldName": "sharp_turn_count"
+                    },
+                    {
+                      "fieldName": "rapid_accel_count"
+                    },
+                    {
+                      "fieldName": "max_speed_mph"
+                    },
+                    {
+                      "fieldName": "night_driving_pct"
+                    },
+                    {
+                      "fieldName": "leaving_home_zone_count"
+                    },
+                    {
+                      "fieldName": "rough_road_conditions_count"
+                    },
+                    {
+                      "fieldName": "high_risk_area_pct"
+                    },
+                    {
+                      "fieldName": "inclement_weather_pct"
+                    },
+                    {
+                      "fieldName": "status"
+                    },
+                    {
+                      "fieldName": "trip_score"
+                    },
+                    {
+                      "fieldName": "offers_clicked"
+                    },
+                    {
+                      "fieldName": "offers_shown"
+                    },
+                    {
+                      "fieldName": "did_convert"
+                    },
+                    {
+                      "fieldName": "converting_trigger"
+                    }
+                  ]
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 49,
+              "width": 12,
+              "height": 4
+            }
+          },
+          {
+            "widget": {
+              "name": "driver_name",
+              "queries": [
+                {
+                  "name": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b30991652b8502403700d8b64_driver_name",
+                  "query": {
+                    "datasetName": "90619107",
+                    "fields": [
+                      {
+                        "name": "driver_name",
+                        "expression": "`driver_name`"
+                      },
+                      {
+                        "name": "driver_name_associativity",
+                        "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "Driver Name"
+                },
+                "widgetType": "filter-single-select",
+                "encodings": {
+                  "fields": [
+                    {
+                      "fieldName": "driver_name",
+                      "queryName": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b30991652b8502403700d8b64_driver_name"
+                    }
+                  ]
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 44,
+              "width": 12,
+              "height": 1
+            }
+          },
+          {
+            "widget": {
+              "name": "underwriter_header",
+              "multilineTextboxSpec": {
+                "lines": [
+                  "<span style=\"font-size:28px;line-height:1.5;color:#00A972\">\ud83d\udcca Underwriter View: Score Distribution & Risk Breakdown</span>"
+                ]
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 28,
+              "width": 12,
+              "height": 1
+            }
+          },
+          {
+            "widget": {
+              "name": "hard-brake-count",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "90619107",
+                    "fields": [
+                      {
+                        "name": "sum(leaving_home_zone_count)",
+                        "expression": "SUM(`leaving_home_zone_count`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "title": "#Leaving Home Zone",
+                  "showTitle": true
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "sum(leaving_home_zone_count)",
+                    "displayName": "sum(leaving_home_zone_count)"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 45,
+              "width": 2,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "speeding_count",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "90619107",
+                    "fields": [
+                      {
+                        "name": "sum(rough_road_conditions_count)",
+                        "expression": "SUM(`rough_road_conditions_count`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "title": "#Rough Road Conditions",
+                  "showTitle": true
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "sum(rough_road_conditions_count)",
+                    "displayName": "sum(rough_road_conditions_count)"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 2,
+              "y": 45,
+              "width": 3,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "avg-inclement-weather-pct",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "90619107",
+                    "fields": [
+                      {
+                        "name": "avg(inclement_weather_pct)",
+                        "expression": "AVG(`inclement_weather_pct`)"
+                      }
+                    ],
+                    "filters": [
+                      {
+                        "expression": "`driver_name` IN (`driver_name`) OR TRUE"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "Avg Inclement Weater Pct"
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "avg(inclement_weather_pct)"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 8,
+              "y": 45,
+              "width": 2,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "sharp-turn-count",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "90619107",
+                    "fields": [
+                      {
+                        "name": "avg(high_risk_area_pct)",
+                        "expression": "AVG(`high_risk_area_pct`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "High Risk Area Pct"
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "avg(high_risk_area_pct)"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 10,
+              "y": 45,
+              "width": 2,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "driver-name",
+              "queries": [
+                {
+                  "name": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b309916dca520afc06ec4f380_driver_name",
+                  "query": {
+                    "datasetName": "a800c52c",
+                    "fields": [
+                      {
+                        "name": "driver_name",
+                        "expression": "`driver_name`"
+                      },
+                      {
+                        "name": "driver_name_associativity",
+                        "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "Driver Name"
+                },
+                "widgetType": "filter-single-select",
+                "encodings": {
+                  "fields": [
+                    {
+                      "fieldName": "driver_name",
+                      "queryName": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b309916dca520afc06ec4f380_driver_name"
+                    }
+                  ]
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 48,
+              "width": 12,
+              "height": 1
+            }
+          },
+          {
+            "widget": {
+              "name": "trip_score_histogram",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dbbe0e5a",
+                    "fields": [
+                      {
+                        "name": "Risk Severity",
+                        "expression": "`Risk Severity`"
+                      },
+                      {
+                        "name": "trip_score",
+                        "expression": "`trip_score`"
+                      },
+                      {
+                        "name": "count(*)",
+                        "expression": "COUNT(`*`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Trip Score Distribution",
+                  "showTitle": true
+                },
+                "widgetType": "histogram",
+                "encodings": {
+                  "x": {
+                    "fieldName": "trip_score",
+                    "displayName": "Trip Score",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "y": {
+                    "fieldName": "count(*)",
+                    "displayName": "Trip Count",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "Risk Severity",
+                    "displayName": "Risk Severity",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 13,
+              "width": 6,
+              "height": 7
+            }
+          },
+          {
+            "widget": {
+              "name": "risk_by_score_band",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "dbbe0e5a",
+                    "fields": [
+                      {
+                        "name": "Trip Score Band",
+                        "expression": "`Trip Score Band`"
+                      },
+                      {
+                        "name": "avg(Total Risk Events)",
+                        "expression": "AVG(`Total Risk Events`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 3,
+                "frame": {
+                  "title": "Risk Events by Trip Score Band",
+                  "showTitle": true
+                },
+                "widgetType": "bar",
+                "encodings": {
+                  "x": {
+                    "fieldName": "Trip Score Band",
+                    "displayName": "Score Band",
+                    "scale": {
+                      "type": "categorical",
+                      "sort": {
+                        "by": "custom-order",
+                        "orderedValues": [
+                          "Poor (0-39)",
+                          "Fair (40-59)",
+                          "Good (60-79)",
+                          "Excellent (80-100)"
+                        ]
+                      }
+                    }
+                  },
+                  "y": {
+                    "fieldName": "avg(Total Risk Events)",
+                    "format": {
+                      "type": "number-plain",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 1
+                      },
+                      "abbreviation": "none"
+                    },
+                    "displayName": "Avg Risk Events",
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "color": {
+                    "fieldName": "Trip Score Band",
+                    "displayName": "Score Band",
+                    "scale": {
+                      "type": "categorical"
+                    }
+                  },
+                  "label": {
+                    "show": true
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 6,
+              "y": 13,
+              "width": 6,
+              "height": 7
+            }
+          },
+          {
+            "widget": {
+              "name": "sharp-turn-count-1",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "90619107",
+                    "fields": [
+                      {
+                        "name": "sum(sharp_turn_count)",
+                        "expression": "SUM(`sharp_turn_count`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "#Sharp Turn Count"
+                },
+                "widgetType": "counter",
+                "encodings": {
+                  "value": {
+                    "fieldName": "sum(sharp_turn_count)"
+                  }
+                }
+              }
+            },
+            "position": {
+              "x": 5,
+              "y": 45,
+              "width": 3,
+              "height": 3
+            }
+          },
+          {
+            "widget": {
+              "name": "2077ccb2",
+              "queries": [
+                {
+                  "name": "main_query",
+                  "query": {
+                    "datasetName": "d70d2be8",
+                    "fields": [
+                      {
+                        "name": "driver_name",
+                        "expression": "`driver_name`"
+                      },
+                      {
+                        "name": "device_id",
+                        "expression": "`device_id`"
+                      },
+                      {
+                        "name": "current_driving_score",
+                        "expression": "`current_driving_score`"
+                      },
+                      {
+                        "name": "driving_score_at_signup",
+                        "expression": "`driving_score_at_signup`"
+                      },
+                      {
+                        "name": "premium_amount",
+                        "expression": "`premium_amount`"
+                      },
+                      {
+                        "name": "discount_pct",
+                        "expression": "`discount_pct`"
+                      },
+                      {
+                        "name": "total_miles",
+                        "expression": "`total_miles`"
+                      },
+                      {
+                        "name": "total_trips",
+                        "expression": "`total_trips`"
+                      },
+                      {
+                        "name": "coverage_level",
+                        "expression": "`coverage_level`"
+                      },
+                      {
+                        "name": "risk_tier",
+                        "expression": "`risk_tier`"
+                      },
+                      {
+                        "name": "address_line1",
+                        "expression": "`address_line1`"
+                      },
+                      {
+                        "name": "address_line2",
+                        "expression": "`address_line2`"
+                      },
+                      {
+                        "name": "city",
+                        "expression": "`city`"
+                      },
+                      {
+                        "name": "state",
+                        "expression": "`state`"
+                      },
+                      {
+                        "name": "country",
+                        "expression": "`country`"
+                      },
+                      {
+                        "name": "trips_completed_at_signup",
+                        "expression": "`trips_completed_at_signup`"
+                      },
+                      {
+                        "name": "pol_id",
+                        "expression": "`pol_id`"
+                      },
+                      {
+                        "name": "has_embedded_policy",
+                        "expression": "`has_embedded_policy`"
+                      },
+                      {
+                        "name": "embedded_policy_product",
+                        "expression": "`embedded_policy_product`"
+                      },
+                      {
+                        "name": "is_active",
+                        "expression": "`is_active`"
+                      },
+                      {
+                        "name": "policy_number",
+                        "expression": "`policy_number`"
+                      },
+                      {
+                        "name": "policy_type",
+                        "expression": "`policy_type`"
+                      },
+                      {
+                        "name": "premium_period",
+                        "expression": "`premium_period`"
+                      },
+                      {
+                        "name": "product_id",
+                        "expression": "`product_id`"
+                      },
+                      {
+                        "name": "product_name",
+                        "expression": "`product_name`"
+                      },
+                      {
+                        "name": "product_type",
+                        "expression": "`product_type`"
+                      },
+                      {
+                        "name": "status",
+                        "expression": "`status`"
+                      },
+                      {
+                        "name": "vehicle_info",
+                        "expression": "`vehicle_info`"
+                      },
+                      {
+                        "name": "zip_code",
+                        "expression": "`zip_code`"
+                      }
+                    ],
+                    "disaggregated": true
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "widgetType": "table",
+                "encodings": {
+                  "columns": [
+                    {
+                      "fieldName": "driver_name"
+                    },
+                    {
+                      "fieldName": "device_id"
+                    },
+                    {
+                      "fieldName": "current_driving_score"
+                    },
+                    {
+                      "fieldName": "driving_score_at_signup"
+                    },
+                    {
+                      "fieldName": "premium_amount"
+                    },
+                    {
+                      "fieldName": "discount_pct"
+                    },
+                    {
+                      "fieldName": "total_miles"
+                    },
+                    {
+                      "fieldName": "total_trips"
+                    },
+                    {
+                      "fieldName": "coverage_level"
+                    },
+                    {
+                      "fieldName": "risk_tier"
+                    },
+                    {
+                      "fieldName": "address_line1"
+                    },
+                    {
+                      "fieldName": "address_line2"
+                    },
+                    {
+                      "fieldName": "city"
+                    },
+                    {
+                      "fieldName": "state"
+                    },
+                    {
+                      "fieldName": "country"
+                    },
+                    {
+                      "fieldName": "trips_completed_at_signup"
+                    },
+                    {
+                      "fieldName": "pol_id"
+                    },
+                    {
+                      "fieldName": "has_embedded_policy"
+                    },
+                    {
+                      "fieldName": "embedded_policy_product"
+                    },
+                    {
+                      "fieldName": "is_active"
+                    },
+                    {
+                      "fieldName": "policy_number"
+                    },
+                    {
+                      "fieldName": "policy_type"
+                    },
+                    {
+                      "fieldName": "premium_period"
+                    },
+                    {
+                      "fieldName": "product_id"
+                    },
+                    {
+                      "fieldName": "product_name"
+                    },
+                    {
+                      "fieldName": "product_type"
+                    },
+                    {
+                      "fieldName": "status"
+                    },
+                    {
+                      "fieldName": "vehicle_info"
+                    },
+                    {
+                      "fieldName": "zip_code"
+                    }
+                  ]
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 54,
+              "width": 12,
+              "height": 6
+            }
+          },
+          {
+            "widget": {
+              "name": "driver-name-1",
+              "queries": [
+                {
+                  "name": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f13820268e1dd2a831a6af07d68122_driver_name",
+                  "query": {
+                    "datasetName": "d70d2be8",
+                    "fields": [
+                      {
+                        "name": "driver_name",
+                        "expression": "`driver_name`"
+                      },
+                      {
+                        "name": "driver_name_associativity",
+                        "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "Driver Name"
+                },
+                "widgetType": "filter-single-select",
+                "encodings": {
+                  "fields": [
+                    {
+                      "fieldName": "driver_name",
+                      "queryName": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f13820268e1dd2a831a6af07d68122_driver_name"
+                    }
+                  ]
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 53,
+              "width": 12,
+              "height": 1
+            }
+          }
+        ],
+        "pageType": "PAGE_TYPE_CANVAS",
+        "layoutVersion": "GRID_V1"
+      },
+      {
+        "name": "3bae0de8",
+        "displayName": "Global Filters",
+        "layout": [
+          {
+            "widget": {
+              "name": "report-date",
+              "queries": [
+                {
+                  "name": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b30991652b8502403700d8b64_yearly(trip_date)",
+                  "query": {
+                    "datasetName": "90619107",
+                    "fields": [
+                      {
+                        "name": "yearly(trip_date)",
+                        "expression": "DATE_TRUNC(\"YEAR\", `trip_date`)"
+                      },
+                      {
+                        "name": "yearly(trip_date)_associativity",
+                        "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                },
+                {
+                  "name": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b309916889a97862e0e3829d0_yearly(offer_date)",
+                  "query": {
+                    "datasetName": "7b0850ed",
+                    "fields": [
+                      {
+                        "name": "yearly(offer_date)",
+                        "expression": "DATE_TRUNC(\"YEAR\", `offer_date`)"
+                      },
+                      {
+                        "name": "yearly(offer_date)_associativity",
+                        "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                },
+                {
+                  "name": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b309916968e44da40bae44d8d_yearly(conversion_date)",
+                  "query": {
+                    "datasetName": "36df4a13",
+                    "fields": [
+                      {
+                        "name": "yearly(conversion_date)",
+                        "expression": "DATE_TRUNC(\"YEAR\", `conversion_date`)"
+                      },
+                      {
+                        "name": "yearly(conversion_date)_associativity",
+                        "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                },
+                {
+                  "name": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b3099169fab408de5f47d53a9_yearly(effective_date)",
+                  "query": {
+                    "datasetName": "bc09fd87",
+                    "fields": [
+                      {
+                        "name": "yearly(effective_date)",
+                        "expression": "DATE_TRUNC(\"YEAR\", `effective_date`)"
+                      },
+                      {
+                        "name": "yearly(effective_date)_associativity",
+                        "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                },
+                {
+                  "name": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b309916a3a5d475bee7fbbd24_yearly(effective_date)",
+                  "query": {
+                    "datasetName": "7ebd1996",
+                    "fields": [
+                      {
+                        "name": "yearly(effective_date)",
+                        "expression": "DATE_TRUNC(\"YEAR\", `effective_date`)"
+                      },
+                      {
+                        "name": "yearly(effective_date)_associativity",
+                        "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                },
+                {
+                  "name": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b309916bb8d9031b6b0cd159a_yearly(trip_date)",
+                  "query": {
+                    "datasetName": "da66491c",
+                    "fields": [
+                      {
+                        "name": "yearly(trip_date)",
+                        "expression": "DATE_TRUNC(\"YEAR\", `trip_date`)"
+                      },
+                      {
+                        "name": "yearly(trip_date)_associativity",
+                        "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                },
+                {
+                  "name": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b309916938214bee68133d312_yearly(report_date)",
+                  "query": {
+                    "datasetName": "dc02a5f3",
+                    "fields": [
+                      {
+                        "name": "yearly(report_date)",
+                        "expression": "DATE_TRUNC(\"YEAR\", `report_date`)"
+                      },
+                      {
+                        "name": "yearly(report_date)_associativity",
+                        "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                },
+                {
+                  "name": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b3099168fa693d3dc0d265753_yearly(signup_date)",
+                  "query": {
+                    "datasetName": "4a564d2f",
+                    "fields": [
+                      {
+                        "name": "yearly(signup_date)",
+                        "expression": "DATE_TRUNC(\"YEAR\", `signup_date`)"
+                      },
+                      {
+                        "name": "yearly(signup_date)_associativity",
+                        "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                      }
+                    ],
+                    "disaggregated": false
+                  }
+                }
+              ],
+              "spec": {
+                "version": 2,
+                "frame": {
+                  "showTitle": true,
+                  "title": "Report Date"
+                },
+                "widgetType": "filter-single-select",
+                "encodings": {
+                  "fields": [
+                    {
+                      "fieldName": "yearly(trip_date)",
+                      "displayName": "YEARLY(trip_date)",
+                      "queryName": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b30991652b8502403700d8b64_yearly(trip_date)"
+                    },
+                    {
+                      "fieldName": "yearly(offer_date)",
+                      "displayName": "YEARLY(offer_date)",
+                      "queryName": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b309916889a97862e0e3829d0_yearly(offer_date)"
+                    },
+                    {
+                      "fieldName": "yearly(conversion_date)",
+                      "displayName": "YEARLY(conversion_date)",
+                      "queryName": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b309916968e44da40bae44d8d_yearly(conversion_date)"
+                    },
+                    {
+                      "fieldName": "yearly(effective_date)",
+                      "displayName": "YEARLY(effective_date)",
+                      "queryName": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b3099169fab408de5f47d53a9_yearly(effective_date)"
+                    },
+                    {
+                      "fieldName": "yearly(effective_date)",
+                      "displayName": "YEARLY(effective_date)",
+                      "queryName": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b309916a3a5d475bee7fbbd24_yearly(effective_date)"
+                    },
+                    {
+                      "fieldName": "yearly(trip_date)",
+                      "displayName": "YEARLY(trip_date)",
+                      "queryName": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b309916bb8d9031b6b0cd159a_yearly(trip_date)"
+                    },
+                    {
+                      "fieldName": "yearly(report_date)",
+                      "displayName": "YEARLY(report_date)",
+                      "queryName": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b309916938214bee68133d312_yearly(report_date)"
+                    },
+                    {
+                      "fieldName": "yearly(signup_date)",
+                      "displayName": "YEARLY(signup_date)",
+                      "queryName": "dashboards/01f11446a9ab1579930a5ebee8255e33/datasets/01f1198b3099168fa693d3dc0d265753_yearly(signup_date)"
+                    }
+                  ]
+                }
+              }
+            },
+            "position": {
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 2
+            }
+          }
+        ],
+        "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+        "layoutVersion": "GRID_V1"
+      }
+    ],
+    "uiSettings": {
+      "theme": {
+        "canvasBackgroundColor": {
+          "light": "#FAFAFB",
+          "dark": "#1F272D"
+        },
+        "widgetBackgroundColor": {
+          "light": "#FFFFFF",
+          "dark": "#11171C"
+        },
+        "fontColor": {
+          "light": "#11171C",
+          "dark": "#E8ECF0"
+        },
+        "selectionColor": {
+          "light": "#2272B4",
+          "dark": "#8ACAFF"
+        },
+        "visualizationColors": [
+          "#077A9D",
+          "#FFAB00",
+          "#00A972",
+          "#FF3621",
+          "#8BCAE7",
+          "#AB4057",
+          "#99DDB4",
+          "#FCA4A1",
+          "#919191",
+          "#BF7080"
+        ],
+        "widgetHeaderAlignment": "LEFT"
+      },
+      "genieSpace": {
+        "isEnabled": true,
+        "enablementMode": "ENABLED"
+      },
+      "applyModeEnabled": false
+    }
+  }
+}
