@@ -7,7 +7,7 @@ screenshots). All data is synthetic; no customer data.
 | # | Component | Evidence file | Proof type |
 |---|-----------|---------------|-----------|
 | 01 | Lakeflow Connect / Zerobus ingest | [01_ingest_zerobus.md](01_ingest_zerobus.md) + [notebooks/ingest_telemetry_zerobus.ipynb](notebooks/ingest_telemetry_zerobus.ipynb) | notebook output ("ingested 5000 records") + table count (11,101 rows / 1000 devices) |
-| 02 | Lakebase device registration | [02_registration_lakebase.md](02_registration_lakebase.md) | job run `856019594029690` SUCCESS + table state correlated to run window |
+| 02 | Lakebase device registration | [02_registration_lakebase.md](02_registration_lakebase.md) | job run `<run-id>` SUCCESS + table state correlated to run window |
 | 03 | Unity Catalog governance | [03_unity_catalog.md](03_unity_catalog.md) | table inventory + online catalog + grants |
 | 04 | Lakebase operational serving | [04_lakebase_serving.md](04_lakebase_serving.md) | row counts + samples of `devices`, `dim_driver_sync`, `agg_location_sync` |
 | 05 | ML: premium/discount forecast | [05_ml_premium_forecast.md](05_ml_premium_forecast.md) + [notebooks/](notebooks/) | run `xgboost_discount_v1` metrics + endpoint READY + **live prediction (5.52)** |
@@ -25,7 +25,7 @@ screenshots). All data is synthetic; no customer data.
 > state in `02_*` and `05_*`.
 
 ## Environment
-- Workspace: `fevm-target` (`https://fevm-serverless-stable-mv5gxq.cloud.databricks.com`)
+- Workspace: `fevm-target` (`https://<workspace-url>`)
 - Delta catalog: `serverless_stable_mv5gxq_catalog.insurance_trip_wise`
 - Lakebase: `projects/tripwise` (+ online UC catalog `av_lakebase_tripwise`)
 - App SP: `faee39eb-c8e5-4d99-ada7-4deca1cea3e4`

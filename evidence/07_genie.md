@@ -32,7 +32,7 @@ ORDER BY embedded_policy_product
 > The most popular embedded product in **2025** is **Extended Zone Protection**, with
 > **133** drivers.
 
-(Conversation `01f1ce8fab071e30b271e16922fbdcea`; status reached `COMPLETED`.)
+(Conversation `<conversation-id>`; status reached `COMPLETED`.)
 
 ## How to reproduce
 ```bash

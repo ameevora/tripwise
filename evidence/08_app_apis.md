@@ -1,7 +1,7 @@
 # Execution Evidence — Databricks App (API responses)
 
 Component: **A Databricks App — surface it to the business.**
-App `tripwise` (https://tripwise-7474658320355593.aws.databricksapps.com). Below are the
+App `tripwise` (https://<app-url>). Below are the
 results the app's endpoints return, produced by running their underlying queries as the
 app service principal.
 

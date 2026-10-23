@@ -12,16 +12,16 @@ Lakebase Streaming*, `213721155994897`).
 ## Job run record
 | Field | Value |
 |-------|-------|
-| run_id | `856019594029690` |
+| run_id | `<run-id>` |
 | job_id | `213721155994897` |
 | result | **SUCCESS** |
 | start | `2026-10-22T21:50:17Z` |
 | end | `2026-10-22T21:54:15Z` |
 | duration | 238 s (~4 min, matches variable-rate streaming) |
-| run page | `…/job/213721155994897/run/856019594029690` |
+| run page | `…/job/213721155994897/run/<run-id>` |
 
-(First task attempt `682568431136215` hit a transient `SIGABRT`; the job's retry
-`701479691573150` succeeded.)
+(First task attempt `<run-id>` hit a transient `SIGABRT`; the job's retry
+`<run-id>` succeeded.)
 
 ## Resulting Lakebase table state — `tripwise_demo.devices`
 ```
@@ -46,7 +46,7 @@ direct proof the run wrote these rows.
 ## How to reproduce
 ```bash
 # run record
-databricks jobs get-run 856019594029690 -p fevm-target -o json
+databricks jobs get-run <run-id> -p fevm-target -o json
 # table state (as instance owner)
 HOST=$(databricks postgres list-endpoints projects/tripwise/branches/production -p fevm-target -o json | jq -r '.[0].status.hosts.host')
 TOKEN=$(databricks postgres generate-database-credential projects/tripwise/branches/production/endpoints/primary -p fevm-target -o json | jq -r '.token')
