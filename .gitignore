@@ -7,5 +7,6 @@ __pycache__/
 venv/
 *.log
 
-# local-only change docs — kept locally, not published to the repo
+# local-only files — kept locally, not published to the repo
 /docs/
+/tripwise/demo_criteria.md
