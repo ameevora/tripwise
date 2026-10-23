@@ -7,6 +7,5 @@ __pycache__/
 venv/
 *.log
 
-# local-only files — kept locally, not published to the repo
+# local-only change docs — kept locally, not published to the repo
 /docs/
-/README.md
