@@ -1,0 +1,16 @@
+{
+  "name": "TripWise - Trip Telemetry Enrichment (Lakeflow Declarative Pipeline)",
+  "catalog": "serverless_stable_mv5gxq_catalog",
+  "schema": "insurance_trip_wise",
+  "serverless": true,
+  "continuous": false,
+  "channel": "CURRENT",
+  "development": true,
+  "libraries": [
+    {
+      "glob": {
+        "include": "/Workspace/Users/amee.vora@databricks.com/tripwise/pipelines/transformations/**"
+      }
+    }
+  ]
+}

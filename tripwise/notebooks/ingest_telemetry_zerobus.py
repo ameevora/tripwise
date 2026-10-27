@@ -8,15 +8,16 @@
 # MAGIC Ingests simulated telematics data into Delta table `serverless_stable_mv5gxq_catalog.insurance_trip_wise.brickwise_device_data` via Zerobus streaming.
 # MAGIC
 # MAGIC **Parameters:**
-# MAGIC - `num_records` (default: 5000) — total number of telemetry records to ingest (distributed across ALL selected devices)
+# MAGIC - `num_trips` (default: 10000) — total number of trips to generate (distributed across ALL selected devices); each trip produces 5-20 records
 # MAGIC - `num_devices` (default: 1000) — number of devices to generate telemetry for (drawn from Lakebase, capped to the registered count)
 # MAGIC - `num_days` (default: 10) — number of days to spread trips across
 # MAGIC
 # MAGIC **Device IDs:** pulled live from Lakebase `tripwise_demo.devices` (first `num_devices`, ordered) during setup, so every telemetry `device_id` is guaranteed to exist in the registration table — telemetry always joins to devices.
 # MAGIC
-# MAGIC **Record distribution:** production-like heavy-tail — a minority of devices generate most telemetry (Pareto-weighted), many are light users, but every device gets a 1-record baseline so all appear and still join. Totals sum to exactly `num_records`. Requires `num_records >= num_devices` for full coverage.
+# MAGIC **Trip distribution:** production-like heavy-tail — a minority of devices take most of the trips (Pareto-weighted), many are light users, but every device gets a 1-trip baseline so all appear and still join. Totals sum to exactly `num_trips`. Requires `num_trips >= num_devices` for full coverage.
 # MAGIC
 # MAGIC **Trip generation:**
+# MAGIC - Each trip generates 5-20 records — with the default `num_trips=10000`, trip IDs run `TRIP00001` through `TRIP10000`
 # MAGIC - Trip IDs use `TRIP{counter:05d}` format matching load_data_v4
 # MAGIC - Locations drawn from US_REGIONS matching agg_location states
 # MAGIC - Coordinates interpolated along trip path between start/end locations
@@ -59,11 +60,11 @@ from zerobus.sdk.shared import RecordType, StreamConfigurationOptions, TableProp
 
 # COMMAND ----------
 
-dbutils.widgets.text("num_records", "5000", "Total telemetry records")
+dbutils.widgets.text("num_trips", "10000", "Total trips to generate")
 dbutils.widgets.text("num_devices", "1000", "Devices to cover (from Lakebase; capped to registered count)")
 dbutils.widgets.text("num_days", "10", "Number of days to spread trips")
 
-NUM_RECORDS = int(dbutils.widgets.get("num_records"))
+NUM_TRIPS = int(dbutils.widgets.get("num_trips"))
 NUM_DEVICES = int(dbutils.widgets.get("num_devices"))
 NUM_DAYS = int(dbutils.widgets.get("num_days"))
 
@@ -87,7 +88,19 @@ LAKEBASE_SCHEMA = "tripwise_demo"
 print(f"Zerobus endpoint: {INGEST_URL}")
 print(f"Workspace: {WORKSPACE_URL}")
 print(f"Target table: {TABLE_NAME}")
-print(f"Records: {NUM_RECORDS}, Devices: {NUM_DEVICES}, Days: {NUM_DAYS}")
+print(f"Trips: {NUM_TRIPS}, Devices: {NUM_DEVICES}, Days: {NUM_DAYS}")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Truncate Target Table
+# MAGIC Clear `brickwise_device_data` before this run's ingest, so each run starts from a
+# MAGIC clean table instead of accumulating across runs.
+
+# COMMAND ----------
+
+spark.sql(f"TRUNCATE TABLE {TABLE_NAME}")
+print(f"Truncated {TABLE_NAME}")
 
 # COMMAND ----------
 
@@ -262,43 +275,41 @@ device_regions = {}
 for device_id in selected_device_ids:
     device_regions[device_id] = random.choices(region_names, weights=region_wts, k=1)[0]
 
-# Per-device record budget — PRODUCTION-LIKE heavy-tail distribution.
-# Real telematics volume is highly skewed: a minority of active drivers generate most of
-# the data, many are light users, a few are barely active. We model that instead of an
-# even split: give every device a 1-record baseline (so all devices appear and still join
-# to tripwise_demo.devices), then allocate the remaining budget using heavy-tailed (Pareto)
-# activity weights — roughly ~20% of devices get ~80% of the extra volume. Totals still
-# sum to exactly NUM_RECORDS.
+# Per-device TRIP budget — PRODUCTION-LIKE heavy-tail distribution.
+# Real telematics volume is highly skewed: a minority of active drivers take most of the
+# trips, many are light users, a few are barely active. We model that instead of an even
+# split: give every device a 1-trip baseline (so all devices appear and still join to
+# tripwise_demo.devices), then allocate the remaining trips using heavy-tailed (Pareto)
+# activity weights — roughly ~20% of devices get ~80% of the extra trips. Totals sum to
+# exactly NUM_TRIPS.
 PARETO_ALPHA = 1.3  # lower = heavier tail (more extreme power users)
 
 n_dev = len(selected_device_ids)
-baseline = 1 if NUM_RECORDS >= n_dev else 0
-if NUM_RECORDS < n_dev:
-    print(f"WARNING: num_records ({NUM_RECORDS}) < devices ({n_dev}); not every device can "
-          f"get a record. Raise num_records to >= {n_dev} for full coverage.")
+baseline = 1 if NUM_TRIPS >= n_dev else 0
+if NUM_TRIPS < n_dev:
+    print(f"WARNING: num_trips ({NUM_TRIPS}) < devices ({n_dev}); not every device can "
+          f"get a trip. Raise num_trips to >= {n_dev} for full coverage.")
 
-records_budget = {device_id: baseline for device_id in selected_device_ids}
-remaining_budget = NUM_RECORDS - baseline * n_dev
+trips_budget = {device_id: baseline for device_id in selected_device_ids}
+remaining_budget = NUM_TRIPS - baseline * n_dev
 
-# Heavy-tail activity weight per device; allocate the remaining records by weighted draw.
+# Heavy-tail activity weight per device; allocate the remaining trips by weighted draw.
 activity_weights = [random.paretovariate(PARETO_ALPHA) for _ in selected_device_ids]
 for idx in random.choices(range(n_dev), weights=activity_weights, k=max(0, remaining_budget)):
-    records_budget[selected_device_ids[idx]] += 1
+    trips_budget[selected_device_ids[idx]] += 1
 
-# Plan trips to fill each device's budget. A device's records are split into trips of
-# 5-20 records (capped by remaining budget): a tight budget collapses to one short trip,
-# a larger budget produces several realistic trips spread across the day window.
+# Generate NUM_TRIPS total trips, each with its own 5-20 records (production-like trip
+# length), distributed across devices per the heavy-tail trip budget above. Trip IDs run
+# TRIP00001 through TRIP{NUM_TRIPS:05d}.
 trips = []
 trip_counter = 1
 
 for device_id in selected_device_ids:
     region = device_regions[device_id]
     locs = US_REGIONS[region]
-    remaining = records_budget[device_id]
 
-    while remaining > 0:
-        rec = min(remaining, random.randint(5, 20))
-        remaining -= rec
+    for _ in range(trips_budget[device_id]):
+        rec = random.randint(5, 20)
 
         trip_id = f"TRIP{trip_counter:05d}"
         trip_counter += 1
@@ -323,18 +334,18 @@ for device_id in selected_device_ids:
             "is_night": hour >= 22 or hour < 5,
         })
 
-# Totals are exact by construction: each device's trips sum to its budget, and the
-# budgets sum to NUM_RECORDS — no rescaling or flooring needed.
+# Trip count is exact by construction (== NUM_TRIPS); total_records is derived since each
+# trip independently draws 5-20 records.
 total_records = sum(t["records_per_trip"] for t in trips)
 devices_covered = len({t["device_id"] for t in trips})
-_vols = sorted(records_budget.values())
+_vols = sorted(trips_budget.values())
 _p50 = _vols[len(_vols) // 2]
 _p90 = _vols[int(len(_vols) * 0.9)]
 _heavy = sum(1 for v in _vols if v >= _p90)
 print(f"Planned {len(trips)} trips for {devices_covered}/{n_dev} devices across {NUM_DAYS} days")
-print(f"Total records to ingest: {total_records} (target {NUM_RECORDS})")
-print(f"Per-device volume (heavy-tail): min {_vols[0]}, median {_p50}, p90 {_p90}, max {_vols[-1]}")
-print(f"  top {_heavy} devices (>= p90) drive the bulk of telemetry — production-like skew")
+print(f"Total records to ingest: {total_records} (derived: {len(trips)} trips x 5-20 records each)")
+print(f"Per-device trip volume (heavy-tail): min {_vols[0]}, median {_p50}, p90 {_p90}, max {_vols[-1]}")
+print(f"  top {_heavy} devices (>= p90) drive the bulk of trips — production-like skew")
 print(f"Trip IDs: TRIP00001 - TRIP{trip_counter - 1:05d}")
 
 # COMMAND ----------

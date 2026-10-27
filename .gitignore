@@ -10,3 +10,4 @@ venv/
 # local-only files — kept locally, not published to the repo
 /docs/
 /tripwise/demo_criteria.md
+/tripwise/fe_bar_feedback.md
